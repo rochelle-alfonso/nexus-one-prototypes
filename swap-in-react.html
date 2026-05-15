@@ -1321,6 +1321,16 @@ window._nxRunStepStagger = (screen) => {
     // and the rest was refunded. Idempotent.
     function insertSuccessBufferRow(screen) {
       if (screen.dataset.nxBufferRowAdded === '1') return;
+      // The success artboard root has a fixed `height: 684px` + `overflow:
+      // clip` from Paper. Adding a new row pushes the Done button past 684px
+      // and clips it. Remove the fixed height so content grows naturally and
+      // the Done button remains visible.
+      const root = screen.firstElementChild;
+      if (root) {
+        root.style.height = 'auto';
+        root.style.minHeight = '684px';
+        root.style.overflow = 'visible';
+      }
       // Find the "Total Fees" row to anchor below it.
       const labelEl = Array.from(screen.querySelectorAll('div')).find(d =>
         d.children.length === 0 && /^Total fees$/i.test((d.textContent || '').trim())
@@ -1343,11 +1353,16 @@ window._nxRunStepStagger = (screen) => {
       bufferRow.style.cssText = 'align-items:center;align-self:stretch;box-sizing:border-box;display:flex;gap:12px;justify-content:space-between;padding:16px';
       bufferRow.innerHTML = [
         '<div style="display:flex;flex-direction:column;gap:2px;min-width:0">',
-          '<div style="color:#161615;font-family:\'Geist-Medium\',\'Geist\',system-ui;font-size:16px;font-weight:500;line-height:24px">Swap Buffer</div>',
+          // Label matches the other 11W-0 row labels (gray #848483, regular weight)
+          '<div style="color:#848483;font-family:\'Geist-Regular\',\'Geist\',system-ui;font-size:16px;line-height:20px">Swap Buffer</div>',
           '<div style="color:#848483;font-family:\'Geist-Regular\',\'Geist\',system-ui;font-size:14px;line-height:20px">Excess funds refunded</div>',
         '</div>',
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">',
-          '<div style="color:#161615;font-family:\'Geist-Medium\',\'Geist\',system-ui;font-size:16px;font-weight:500;line-height:24px;font-variant-numeric:tabular-nums">$1.50 refunded</div>',
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">',
+          // Tag pill before the amount: [REFUNDED] $1.50
+          '<div style="display:flex;align-items:center;gap:6px">',
+            '<span style="background:#EAF4EE;color:#1F8A4F;font-family:\'Geist-SemiBold\',\'Geist\',system-ui;font-size:10px;font-weight:600;letter-spacing:0.08em;line-height:14px;padding:2px 6px;border-radius:4px;text-transform:uppercase">Refunded</span>',
+            '<span style="color:#161615;font-family:\'Geist-Medium\',\'Geist\',system-ui;font-size:16px;font-weight:500;line-height:24px;font-variant-numeric:tabular-nums">$1.50</span>',
+          '</div>',
           '<div style="color:#848483;font-family:\'Geist-Regular\',\'Geist\',system-ui;font-size:14px;line-height:20px;font-variant-numeric:tabular-nums">$1.50 used</div>',
         '</div>',
       ].join('');
