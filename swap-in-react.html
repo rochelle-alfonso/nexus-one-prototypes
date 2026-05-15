@@ -1092,6 +1092,18 @@ window._nxRunStepStagger = (screen) => {
     // Design refinements (post-mount visual polish)
     // ─────────────────────────────────────────────────────────────
     function applyDesignRefinements(screen, id) {
+      // ── Big numeric amounts (28px / 32px Geist with tabular-nums) bumped to medium weight ──
+      //    Targets the large amount text in every asset row + the RECEIVE amount.
+      //    Leaves the smaller "≈ $X" lines and Delight success digits alone.
+      Array.from(screen.querySelectorAll('div')).forEach(el => {
+        if (el.children.length !== 0) return;
+        const s = el.getAttribute('style') || '';
+        if (!s.includes('tabular-nums')) return;
+        if (!/font-size:(28|32)px/.test(s)) return;
+        el.style.fontFamily = '"Geist-Medium", "Geist", system-ui, sans-serif';
+        el.style.fontWeight = '500';
+      });
+
       // ── 2. Fix RECEIVE USD estimate on multi-asset screens ──
       //    The hardcoded "≈ $500.50" in the RECEIVE card doesn't match the
       //    displayed 400.50 USDT amount. Coerce it to match (1 USDT ≈ $1).
