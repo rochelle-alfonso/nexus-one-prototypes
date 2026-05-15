@@ -1022,8 +1022,8 @@ window._nxRunStepStagger = (screen) => {
     //   step 4: morph the failed row to "verified" (blue check)
     // Wire the chevron (up/down arrow on the pending status card) so clicking
     // it toggles between the expanded step list (20L-0) and the collapsed
-    // status row (25P-0). Both Paper artboards include an SVG chevron with a
-    // 12×12 viewBox and a single zig-zag path — pick that as the handle.
+    // status row (25P-0). Paper uses `M3 5L7 9L11 5` for both (14×14 viewBox);
+    // the only difference is a CSS rotate:180deg on the SVG in 20L-0.
     function wirePendingToggle(screen, dispatch) {
       if (screen.dataset.nxPendingToggleWired === '1') return;
       const svgs = Array.from(screen.querySelectorAll('svg'));
@@ -1031,27 +1031,26 @@ window._nxRunStepStagger = (screen) => {
         const path = svg.querySelector('path');
         if (!path) return false;
         const d = path.getAttribute('d') || '';
-        // Match chevron-down ("M3 4.5L6 7.5L9 4.5") or chevron-up
-        // ("M3 7.5L6 4.5L9 7.5"). The pending header chevrons are sized 12-16px
-        // — exclude smaller chevrons used elsewhere by also checking ancestor
-        // size.
-        return /^M3 [47]\.5L6 [47]\.5L9 [47]\.5$/.test(d);
+        return d.trim() === 'M3 5L7 9L11 5';
       });
       if (!toggle) return;
-      // Pick the largest clickable ancestor that visually wraps the chevron.
-      let target = toggle.parentElement || toggle;
-      let hops = 0;
-      while (target.parentElement && hops < 3) {
-        const w = target.offsetWidth || 0;
-        if (w >= 24 && w <= 80) break;
-        target = target.parentElement;
-        hops++;
-      }
-      target.style.cursor = 'pointer';
-      target.addEventListener('click', (e) => {
+      // Make a wider hit target so the user can click around the icon.
+      toggle.style.cursor = 'pointer';
+      toggle.style.padding = '8px';
+      toggle.style.boxSizing = 'content-box';
+      toggle.addEventListener('click', (e) => {
         e.stopPropagation();
         dispatch({ type: 'TOGGLE_PENDING_COLLAPSE' });
       });
+      // Also wire the immediate parent in case the SVG itself isn't catching.
+      if (toggle.parentElement) {
+        toggle.parentElement.style.cursor = 'pointer';
+        toggle.parentElement.addEventListener('click', (e) => {
+          // Avoid double-firing when the SVG handler already ran.
+          if (e.target === toggle || toggle.contains(e.target)) return;
+          dispatch({ type: 'TOGGLE_PENDING_COLLAPSE' });
+        });
+      }
       screen.dataset.nxPendingToggleWired = '1';
     }
 
