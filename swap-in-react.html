@@ -1206,8 +1206,18 @@ window._nxRunStepStagger = (screen) => {
 
       const isConfirm = ['1DB-0', '1FN-0', '1I6-0'].includes(id);
       if (isConfirm) {
-        // Remove any existing expansions, then re-add per state
+        // Remove any existing expansions
         screen.querySelectorAll('.nx-expansion').forEach(e => e.remove());
+        // Reset every View/Hide Details link back to the collapsed state
+        // (label "View Details", chevron pointing down). setFeeExpansion will
+        // re-flip the one for the currently-open row. This ensures opening a
+        // new dropdown auto-closes the previously-open one's label/chevron.
+        screen.querySelectorAll('.nx-link').forEach(link => {
+          const textEl = Array.from(link.children).find(c => c.tagName === 'DIV' && c.children.length === 0);
+          if (textEl) textEl.textContent = 'View Details';
+          const svg = link.querySelector('svg');
+          if (svg) svg.style.transform = '';
+        });
         if (state.detailsExpanded === 'fees') setFeeExpansion(screen, 'fees', true);
         else if (state.detailsExpanded === 'assets') setFeeExpansion(screen, 'assets', true);
         else if (state.detailsExpanded === 'priceImpact') setFeeExpansion(screen, 'priceImpact', true);
