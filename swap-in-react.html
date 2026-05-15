@@ -1317,6 +1317,33 @@ window._nxRunStepStagger = (screen) => {
       if (['YC-0', '1QQ-0', '1N1-0', '1US-0'].includes(id)) {
         refinePickerRows(screen);
       }
+
+      // ── Strip the top "Swap" chrome bar from picker overlays ──
+      // Picker screens (used only as bottom-sheet overlays) include the
+      // file-level Swap header with the refresh + X icons. The host screen
+      // already shows that chrome, so the overlay must not duplicate it.
+      if (['YC-0', '1QQ-0', '1N1-0', '1US-0', '1KX-0'].includes(id)) {
+        stripPickerChromeHeader(screen);
+      }
+    }
+
+    // Hide the top "Swap" chrome bar in a picker overlay screen so the slide-in
+    // only shows the picker card (Choose asset / search / tabs / list / Done).
+    function stripPickerChromeHeader(screen) {
+      if (screen.dataset.nxHeaderStripped === '1') return;
+      // The header is the first child of the root that contains the literal
+      // text "Swap" and a row with the refresh + X icons (opacity:0.45 in JSX).
+      const root = screen.firstElementChild;
+      if (!root) return;
+      const firstChild = root.firstElementChild;
+      if (!firstChild) return;
+      const style = firstChild.getAttribute('style') || '';
+      const hasOpacity45 = /opacity:\s*0\.45/.test(style);
+      const hasSwapText = /(^|\s)Swap(\s|$)/.test(firstChild.textContent || '');
+      if (hasOpacity45 || hasSwapText) {
+        firstChild.style.display = 'none';
+        screen.dataset.nxHeaderStripped = '1';
+      }
     }
 
     // Completely rebuild each picker row's innerHTML into a clean horizontal layout.
