@@ -405,42 +405,11 @@
     .devbar-state .k { color: #4A9EE8; }
     .devbar-state .v { color: #B5D5F0; }
 
-    /* iPhone frame */
-    .phone-frame {
-      position: relative;
-      width: 390px;
-      height: 844px;
-      background: #000000;
-      border-radius: 48px;
-      box-shadow: 0 0 0 8px #1F1F1F, 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    .phone-frame .dynamic-island {
-      position: absolute;
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 122px;
-      height: 36px;
-      background: #000;
-      border-radius: 20px;
-      z-index: 200;
-    }
-    .phone-viewport {
-      position: absolute;
-      inset: 56px 0 0 0;
-      background: #F9F9F8;
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-    .phone-scale {
+    /* Frameless screen wrapper — same style as the other static prototypes */
+    .screen-host {
       width: 450px;
-      position: absolute;
-      left: 0;
-      top: 0;
-      transform: scale(0.8667);
-      transform-origin: top left;
+      margin: 0 auto;
+      position: relative;
     }
 
     /* Screen stages */
@@ -1606,27 +1575,20 @@ window._nxRunStepStagger = (screen) => {
         <div className="app">
           <DevBar state={state} dispatch={dispatch} />
 
-          <div className="phone-frame">
-            <div className="dynamic-island" />
-            <div className="phone-viewport">
-              <div className="phone-scale">
-
-                <div className="stage">
-                  <div key={'mode-' + state.mode} className="mode-screen slide-enter">
-                    <Screen id={modeId} state={state} dispatch={dispatch} />
-                  </div>
-
-                  {overlayId && (
-                    <>
-                      <div className="overlay-dim" onClick={() => dispatch({ type: 'CLOSE_OVERLAY' })} />
-                      <div key={'ov-' + state.overlay} className="overlay-stage fade-enter">
-                        <Screen id={overlayId} state={state} dispatch={dispatch} />
-                      </div>
-                    </>
-                  )}
-                </div>
-
+          <div className="screen-host">
+            <div className="stage">
+              <div key={'mode-' + state.mode} className="mode-screen slide-enter">
+                <Screen id={modeId} state={state} dispatch={dispatch} />
               </div>
+
+              {overlayId && (
+                <>
+                  <div className="overlay-dim" onClick={() => dispatch({ type: 'CLOSE_OVERLAY' })} />
+                  <div key={'ov-' + state.overlay} className="overlay-stage fade-enter">
+                    <Screen id={overlayId} state={state} dispatch={dispatch} />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
