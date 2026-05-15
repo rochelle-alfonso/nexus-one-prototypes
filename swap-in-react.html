@@ -1605,6 +1605,22 @@ window._nxRunStepStagger = (screen) => {
         ? (((tokenImgEl.getAttribute('style') || '').match(/background-image:url\(([^)]+)\)/) || [])[1] || null)
         : null;
 
+      // Chain badge: a small (10–16px) absolutely-positioned div with its own
+      // background-image, anchored to the bottom-right of the token icon.
+      // Used for "this token on this specific chain" markers.
+      let chainIconUrl = null;
+      const badgeEls = Array.from(row.querySelectorAll('div')).filter(d => {
+        const s = d.getAttribute('style') || '';
+        if (!s.includes('background-image:url')) return false;
+        if (!s.includes('position:absolute')) return false;
+        const w = parseInt((s.match(/width:(\d+)px/) || [])[1], 10);
+        return w >= 10 && w <= 16;
+      });
+      if (badgeEls.length === 1) {
+        chainIconUrl = ((badgeEls[0].getAttribute('style') || '')
+          .match(/background-image:url\(([^)]+)\)/) || [])[1] || null;
+      }
+
       // Walk leaf text nodes and classify them.
       const leaves = Array.from(row.querySelectorAll('div')).filter(d => d.children.length === 0);
       let tokenSymbol = '';
@@ -1635,7 +1651,7 @@ window._nxRunStepStagger = (screen) => {
       const selected = radioStyle.includes('border-color:#006BF4') && /border-width:[3-9]px/.test(radioStyle);
 
       if (!tokenSymbol && !iconUrl) return null;
-      return { tokenSymbol, chainText, balance, usd, iconUrl, hasUnified, selected };
+      return { tokenSymbol, chainText, balance, usd, iconUrl, chainIconUrl, hasUnified, selected };
     }
 
     // Render the row HTML from extracted data.
@@ -1652,12 +1668,19 @@ window._nxRunStepStagger = (screen) => {
       const radioRing = d.selected
         ? 'background:#FFFFFE;border:5px solid #006BF4;'
         : 'background:#FFFFFE;border:1.5px solid #E8E8E7;';
+      // Chain-badge overlay (small icon bottom-right of the token icon)
+      const chainBadge = d.chainIconUrl
+        ? `<div style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:999px;outline:1.5px solid #FFFFFE;background-image:url(${d.chainIconUrl});background-position:50%;background-repeat:no-repeat;background-size:100% 100%;box-sizing:border-box"></div>`
+        : '';
       // Match Paper exactly: paddingBlock 16px, paddingInline 16px, gap 12px,
       // 36px icon, 16px/24px name & balance, 14px/20px chain & USD.
       return [
         '<div style="display:flex;align-items:center;gap:12px;width:100%;padding:16px;box-sizing:border-box">',
           `<div style="flex-shrink:0;width:18px;height:18px;border-radius:999px;${radioRing}box-sizing:border-box"></div>`,
-          `<div style="flex-shrink:0;width:36px;height:36px;border-radius:999px;overflow:hidden;${iconBg}"></div>`,
+          `<div style="flex-shrink:0;position:relative;width:36px;height:36px">`,
+            `<div style="width:36px;height:36px;border-radius:999px;overflow:hidden;${iconBg}"></div>`,
+            chainBadge,
+          `</div>`,
           '<div style="display:flex;flex-direction:column;flex:1;gap:2px;min-width:0">',
             '<div style="display:flex;align-items:center;gap:8px">',
               `<span style="color:#161615;font-family:\'Geist-Medium\',\'Geist\',system-ui;font-size:16px;font-weight:500;line-height:24px">${esc(d.tokenSymbol)}</span>`,
