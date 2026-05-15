@@ -1020,6 +1020,41 @@ window._nxRunStepStagger = (screen) => {
     //   step 2: + "Liquidity intent confirmed"
     //   step 3: + "Cross-chain proof failed" (red X, retrying)
     //   step 4: morph the failed row to "verified" (blue check)
+    // Wire the chevron (up/down arrow on the pending status card) so clicking
+    // it toggles between the expanded step list (20L-0) and the collapsed
+    // status row (25P-0). Both Paper artboards include an SVG chevron with a
+    // 12×12 viewBox and a single zig-zag path — pick that as the handle.
+    function wirePendingToggle(screen, dispatch) {
+      if (screen.dataset.nxPendingToggleWired === '1') return;
+      const svgs = Array.from(screen.querySelectorAll('svg'));
+      const toggle = svgs.find(svg => {
+        const path = svg.querySelector('path');
+        if (!path) return false;
+        const d = path.getAttribute('d') || '';
+        // Match chevron-down ("M3 4.5L6 7.5L9 4.5") or chevron-up
+        // ("M3 7.5L6 4.5L9 7.5"). The pending header chevrons are sized 12-16px
+        // — exclude smaller chevrons used elsewhere by also checking ancestor
+        // size.
+        return /^M3 [47]\.5L6 [47]\.5L9 [47]\.5$/.test(d);
+      });
+      if (!toggle) return;
+      // Pick the largest clickable ancestor that visually wraps the chevron.
+      let target = toggle.parentElement || toggle;
+      let hops = 0;
+      while (target.parentElement && hops < 3) {
+        const w = target.offsetWidth || 0;
+        if (w >= 24 && w <= 80) break;
+        target = target.parentElement;
+        hops++;
+      }
+      target.style.cursor = 'pointer';
+      target.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dispatch({ type: 'TOGGLE_PENDING_COLLAPSE' });
+      });
+      screen.dataset.nxPendingToggleWired = '1';
+    }
+
     function applyInflightStep(screen, step) {
       // No-op if the same step is being applied — avoids re-touching styles
       // on every render and the resulting visible flicker.
@@ -1226,6 +1261,11 @@ window._nxRunStepStagger = (screen) => {
       const isPending = id === '20L-0';
       if (isPending && state.pendingStep != null) {
         applyInflightStep(screen, state.pendingStep);
+      }
+
+      // ── Pending chevron toggle (both 20L-0 expanded and 25P-0 collapsed) ──
+      if (id === '20L-0' || id === '25P-0') {
+        wirePendingToggle(screen, dispatch);
       }
 
       // ── Design refinements (idempotent visual polish across screens) ──
@@ -1564,6 +1604,7 @@ window._nxRunStepStagger = (screen) => {
       pickerSlot: null,           // 'send' or 'receive' — remembered when opening picker
       detailsExpanded: null,      // null | 'fees' | 'assets' | 'priceImpact'
       pendingStep: 0,             // 0..4
+      pendingCollapsed: false,    // when true, render 25P-0 + auto-cycle to success
       transitionKind: 'slide',    // 'slide' | 'fade'
     };
 
@@ -1609,7 +1650,9 @@ window._nxRunStepStagger = (screen) => {
         case 'GO_CONFIRM':
           return { ...state, mode: 'confirm', overlay: null, detailsExpanded: null, transitionKind: 'slide' };
         case 'GO_PENDING':
-          return { ...state, mode: 'pending', overlay: null, pendingStep: 0, transitionKind: 'slide' };
+          return { ...state, mode: 'pending', overlay: null, pendingStep: 0, pendingCollapsed: false, transitionKind: 'slide' };
+        case 'TOGGLE_PENDING_COLLAPSE':
+          return { ...state, pendingCollapsed: !state.pendingCollapsed, pendingStep: 0, transitionKind: 'fade' };
         case 'GO_SUCCESS':
           return { ...state, mode: 'success', overlay: null, transitionKind: 'slide' };
         case 'RESET':
@@ -1644,6 +1687,7 @@ window._nxRunStepStagger = (screen) => {
         state.pickerFilter,
         state.detailsExpanded,
         state.pendingStep,
+        state.pendingCollapsed,
         dispatch,
       ]);
 
@@ -1817,16 +1861,27 @@ window._nxRunStepStagger = (screen) => {
     function App() {
       const [state, dispatch] = useReducer(reducer, initialState);
 
-      // Pending screen: show the expanded steps statically (no auto-advance).
-      // The user wants to inspect this state, not watch it cycle. Park at
-      // step=3 so all 4 rows are visible (verifying / verified / verified /
-      // failed-retrying) without auto-flipping to success.
+      // Pending screen:
+      //   - expanded (20L-0): show all 4 steps statically (park at step=3)
+      //   - collapsed (25P-0): cycle through steps 0→4 then auto-advance to
+      //     success after ~4s, simulating the swap actually completing.
       useEffect(() => {
         if (state.mode !== 'pending') return;
-        dispatch({ type: 'SET_PENDING_STEP', step: 3 });
-      }, [state.mode]);
+        if (!state.pendingCollapsed) {
+          dispatch({ type: 'SET_PENDING_STEP', step: 3 });
+          return;
+        }
+        const t1 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 1 }), 1000);
+        const t2 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 2 }), 2000);
+        const t3 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 3 }), 3000);
+        const t4 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 4 }), 3500);
+        const t5 = setTimeout(() => dispatch({ type: 'GO_SUCCESS' }), 4000);
+        return () => [t1, t2, t3, t4, t5].forEach(clearTimeout);
+      }, [state.mode, state.pendingCollapsed]);
 
-      const modeId = MODE_SCREEN[state.mode] || '3H-0';
+      const modeId = state.mode === 'pending'
+        ? (state.pendingCollapsed ? '25P-0' : '20L-0')
+        : (MODE_SCREEN[state.mode] || '3H-0');
       const overlayId = state.overlay ? OVERLAY_SCREEN[state.overlay] : null;
 
       return (
@@ -1835,7 +1890,7 @@ window._nxRunStepStagger = (screen) => {
 
           <div className="screen-host">
             <div className="stage">
-              <div key={'mode-' + state.mode} className="mode-screen slide-enter">
+              <div key={'mode-' + state.mode + '-' + modeId} className="mode-screen slide-enter">
                 <Screen id={modeId} state={state} dispatch={dispatch} />
               </div>
 
