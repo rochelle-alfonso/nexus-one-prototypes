@@ -782,6 +782,8 @@ window._nxRunStepStagger = (screen) => {
       Array.from(tabContainer.children).forEach(tab => {
         const lbl = (tab.textContent || '').trim().toLowerCase();
         const innerText = Array.from(tab.querySelectorAll('div')).find(c => c.children.length === 0 && c.textContent.trim());
+        // Match inactive tab height to active so there's no spillover above/below the pill
+        tab.style.height = '40px';
         if (lbl === filter) {
           tab.style.backgroundColor = '#FFFFFE';
           tab.style.borderRadius = '9px';
@@ -1156,6 +1158,9 @@ window._nxRunStepStagger = (screen) => {
       });
 
       // ── 6. Cap chain badges at ≤40% of their parent token icon ──
+      //    The success-screen checkmark badge (blue circle with white check
+      //    inside) lives on a 64px token icon and looks oversized — shrink
+      //    it further to ~25% (16px) so the icon reads as the primary mark.
       Array.from(screen.querySelectorAll('div')).forEach(badge => {
         const style = badge.getAttribute('style') || '';
         if (!style.includes('position:absolute')) return;
@@ -1169,10 +1174,17 @@ window._nxRunStepStagger = (screen) => {
         if (!pw) return;
         const cw = parseInt((style.match(/width:(\d+)px/) || [])[1], 10);
         if (!cw) return;
-        const maxSize = Math.floor(pw * 0.4);
+        const isSuccessCheck = style.includes('background-color:#006BF4') &&
+                               !!badge.querySelector('svg path[stroke="#FFFFFE"]');
+        const ratio = isSuccessCheck ? 0.28 : 0.4;
+        const maxSize = Math.floor(pw * ratio);
         if (cw > maxSize) {
           badge.style.width = maxSize + 'px';
           badge.style.height = maxSize + 'px';
+          if (isSuccessCheck) {
+            // Also reduce the white border around the badge proportionally
+            badge.style.borderWidth = '2px';
+          }
           const inner = badge.firstElementChild;
           if (inner) {
             inner.style.width = maxSize + 'px';
@@ -1310,11 +1322,14 @@ window._nxRunStepStagger = (screen) => {
       const iconBg = d.iconUrl
         ? `background-image:url(${d.iconUrl});background-position:50%;background-repeat:no-repeat;background-size:100% 100%;`
         : 'background:#F0F0EF;';
+      // Match Paper exactly: 18px radio on the LEFT, thin gray ring when
+      // unselected, thick blue ring (≈ filled disc) when selected.
       const radioRing = d.selected
-        ? 'background:#FFFFFE;border:7px solid #006BF4;'
+        ? 'background:#FFFFFE;border:5px solid #006BF4;'
         : 'background:#FFFFFE;border:1.5px solid #E8E8E7;';
       return [
         '<div style="display:flex;align-items:center;gap:12px;width:100%;height:64px;padding:0 16px;box-sizing:border-box">',
+          `<div style="flex-shrink:0;width:18px;height:18px;border-radius:999px;${radioRing}box-sizing:border-box"></div>`,
           `<div style="flex-shrink:0;width:32px;height:32px;border-radius:999px;${iconBg}"></div>`,
           '<div style="display:flex;flex-direction:column;flex:1;gap:2px;min-width:0">',
             '<div style="display:flex;align-items:center;gap:6px">',
@@ -1327,7 +1342,6 @@ window._nxRunStepStagger = (screen) => {
             `<div style="color:#161615;font-family:\'Geist-Medium\',\'Geist\',system-ui;font-size:15px;font-weight:500;line-height:20px;font-variant-numeric:tabular-nums">${esc(d.balance)}</div>`,
             `<div style="color:#848483;font-family:\'Geist-Regular\',\'Geist\',system-ui;font-size:13px;line-height:18px;font-variant-numeric:tabular-nums">${esc(d.usd)}</div>`,
           '</div>',
-          `<div style="flex-shrink:0;width:24px;height:24px;border-radius:999px;${radioRing}box-sizing:border-box"></div>`,
         '</div>'
       ].join('');
     }
