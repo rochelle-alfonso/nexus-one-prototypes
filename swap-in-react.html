@@ -1692,15 +1692,13 @@ window._nxRunStepStagger = (screen) => {
     function App() {
       const [state, dispatch] = useReducer(reducer, initialState);
 
-      // Pending screen: animate the step sequence then auto-advance to success.
+      // Pending screen: show the expanded steps statically (no auto-advance).
+      // The user wants to inspect this state, not watch it cycle. Park at
+      // step=3 so all 4 rows are visible (verifying / verified / verified /
+      // failed-retrying) without auto-flipping to success.
       useEffect(() => {
         if (state.mode !== 'pending') return;
-        const t1 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 1 }), 1000);
-        const t2 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 2 }), 2000);
-        const t3 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 3 }), 3000);
-        const t4 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 4 }), 3500);
-        const t5 = setTimeout(() => dispatch({ type: 'GO_SUCCESS' }), 4000);
-        return () => [t1, t2, t3, t4, t5].forEach(clearTimeout);
+        dispatch({ type: 'SET_PENDING_STEP', step: 3 });
       }, [state.mode]);
 
       const modeId = MODE_SCREEN[state.mode] || '3H-0';
