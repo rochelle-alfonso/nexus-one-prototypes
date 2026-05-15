@@ -1605,9 +1605,10 @@ window._nxRunStepStagger = (screen) => {
         ? (((tokenImgEl.getAttribute('style') || '').match(/background-image:url\(([^)]+)\)/) || [])[1] || null)
         : null;
 
-      // Chain badge: a small (10–16px) absolutely-positioned div with its own
-      // background-image, anchored to the bottom-right of the token icon.
-      // Used for "this token on this specific chain" markers.
+      // Chain badge: try extracting an absolutely-positioned small bg-image
+      // div first; if that fails (style strings get normalized in some flows),
+      // fall back to a chain-name → Paper-icon-URL map keyed off chainText
+      // detected later in this function.
       let chainIconUrl = null;
       const badgeEls = Array.from(row.querySelectorAll('div')).filter(d => {
         const s = d.getAttribute('style') || '';
@@ -1651,6 +1652,21 @@ window._nxRunStepStagger = (screen) => {
       const selected = radioStyle.includes('border-color:#006BF4') && /border-width:[3-9]px/.test(radioStyle);
 
       if (!tokenSymbol && !iconUrl) return null;
+
+      // Fallback: if DOM-based chain extraction failed but we know the chain
+      // name (Arbitrum, Base, Optimism, Polygon, Ethereum), map to the known
+      // Paper-CDN icon URL so the badge still renders.
+      if (!chainIconUrl && chainText) {
+        const CHAIN_ICONS = {
+          'Arbitrum': 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/6QJRRY0GSJXQP5YQHSX35QNXFM.png',
+          'Base':     'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/3MMP197C513VQXSB9AVFCAKSGQ.png',
+          'Optimism': 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/5QY8PJHAYP07Y6Z2M581HMX6DM.png',
+          'Polygon':  'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/63HJJXD1YGS4DCQN2DQRQSGMF2.png',
+          'Ethereum': 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/40BQN1YH7HNSSTG19JRZ6FKXPV.png',
+        };
+        chainIconUrl = CHAIN_ICONS[chainText] || null;
+      }
+
       return { tokenSymbol, chainText, balance, usd, iconUrl, chainIconUrl, hasUnified, selected };
     }
 
