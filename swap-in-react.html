@@ -175,17 +175,22 @@
     .nx-pct:active {
       transform: scale(0.96) !important;
     }
+    /* X-delete is hidden by default and removed from layout (display:none)
+       so the row's right section fills naturally. JS reveals it on the row
+       that currently has the typing cursor. */
     .nx-xdel {
       cursor: pointer;
-      opacity: 1;
-      pointer-events: auto;
+      display: none !important;
       transition: background-color 0.15s ease, transform 0.15s cubic-bezier(0.22, 1, 0.36, 1) !important;
     }
-    .nx-xdel:hover {
+    .nx-xdel.nx-xdel-visible {
+      display: inline-flex !important;
+    }
+    .nx-xdel.nx-xdel-visible:hover {
       background-color: #FFD9D9 !important;
       transform: scale(1.15) !important;
     }
-    .nx-xdel:active {
+    .nx-xdel.nx-xdel-visible:active {
       transform: scale(0.88) !important;
     }
     /* Picker row: clear selected state — light blue tint + 3px blue left border */
