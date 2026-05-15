@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>Nexus One — React Prototype (interactive)</title>
+  <title>Nexus One — React Prototype (state machine)</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono&family=Fraunces:opsz,wght@9..144,400;500&display=swap">
   <style>
 
@@ -335,53 +335,154 @@
     .step-indicator { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 8px 14px; background: rgba(255,255,255,0.1); backdrop-filter: blur(8px); color: #FFFFFE; border-radius: 999px; font-size: 12px; z-index: 100; }
   
 
-    /* ─── React prototype shell ─── */
-    body { display: flex; flex-direction: column; padding: 24px 20px 80px; }
-    .proto-frame {
-      position: relative;
+    /* ─── Prototype shell ─── */
+    body {
+      margin: 0;
+      padding: 24px 20px 80px;
+      background: #0F0F0F;
+      font-family: 'Geist', system-ui, sans-serif;
+      color: #FFFFFE;
+      min-height: 100vh;
+    }
+    .app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* Dev toolbar */
+    .devbar {
       width: 100%;
-      max-width: 520px;
-      margin: 24px auto 0;
-      min-height: 760px;
+      max-width: 1080px;
+      background: #1A1A1A;
+      border: 1px solid #2A2A2A;
+      border-radius: 14px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .devbar-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .devbar-label {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #7C7C7A;
+      margin-right: 4px;
+      min-width: 64px;
+    }
+    .devbar-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: #2A2A2A;
+      color: #FFFFFE;
+      border: 1px solid #3A3A3A;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .devbar-btn:hover { background: #353535; }
+    .devbar-btn.active {
+      background: #006BF4;
+      border-color: #006BF4;
+      color: #FFFFFE;
+    }
+    .devbar-btn.danger {
+      background: #2A1818;
+      border-color: #4A1F1F;
+      color: #FF6B6B;
+    }
+    .devbar-btn.danger:hover { background: #3A1F1F; }
+    .devbar-state {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      color: #7C7C7A;
+      padding-top: 4px;
+    }
+    .devbar-state .k { color: #4A9EE8; }
+    .devbar-state .v { color: #B5D5F0; }
+
+    /* iPhone frame */
+    .phone-frame {
+      position: relative;
+      width: 390px;
+      height: 844px;
+      background: #000000;
+      border-radius: 48px;
+      box-shadow: 0 0 0 8px #1F1F1F, 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .phone-frame .dynamic-island {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 122px;
+      height: 36px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 200;
+    }
+    .phone-viewport {
+      position: absolute;
+      inset: 56px 0 0 0;
+      background: #F9F9F8;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .phone-scale {
+      width: 450px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform: scale(0.8667);
+      transform-origin: top left;
+    }
+
+    /* Screen stages */
+    .stage {
+      position: relative;
+      width: 450px;
+    }
+    .mode-screen { position: relative; }
+    .overlay-dim {
+      position: absolute;
+      inset: 0;
+      z-index: 40;
+      background: rgba(20, 20, 20, 0.32);
+      backdrop-filter: blur(2px);
+      animation: fadeIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .overlay-stage {
+      position: absolute;
+      inset: 0;
+      z-index: 50;
       display: flex;
       align-items: flex-start;
       justify-content: center;
     }
-    .proto-screen-wrap {
-      transition: opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1), transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    .proto-screen-wrap.entering-forward { opacity: 0; transform: translateX(28px); }
-    .proto-screen-wrap.entering-back { opacity: 0; transform: translateX(-28px); }
-    .proto-screen-wrap.entered { opacity: 1; transform: translateX(0); }
-    .proto-controls {
-      position: fixed;
-      top: 16px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 12px; align-items: center; z-index: 100;
-      font-family: 'Geist', system-ui, sans-serif;
-    }
-    .proto-btn {
-      padding: 10px 16px; border-radius: 10px;
-      background: #2A2A2A; color: #FFFFFE;
-      border: 1px solid #3A3A3A; font-size: 13px;
-      font-family: inherit; cursor: pointer;
-      transition: background 0.15s ease;
-    }
-    .proto-btn:hover:not(:disabled) { background: #3A3A3A; }
-    .proto-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .proto-name {
-      color: #FFFFFE; opacity: 0.7; font-size: 13px;
-      min-width: 280px; text-align: center;
-    }
-    .proto-step {
-      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-      padding: 8px 14px; background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(8px); color: #FFFFFE;
-      border-radius: 999px; font-size: 12px; z-index: 100;
-      font-family: 'Geist', system-ui, sans-serif;
-    }
-    .proto-screen-wrap .screen { display: flex !important; }
 
-    /* Inline-edit affordance for recipient address */
+    /* Slide transitions (mode) */
+    .slide-enter {
+      animation: slideIn 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(28px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    /* Fade-in for modals/overlays */
+    .fade-enter {
+      animation: fadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.985); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* Inline-edit affordance for recipient */
     [contenteditable="true"].nx-editing {
       outline: 2px solid #006BF4 !important;
       outline-offset: 3px !important;
@@ -389,21 +490,16 @@
       caret-color: #006BF4;
     }
 
-    /* Expanded fee/asset breakdown injected on "View Details" click */
-    .nx-fee-expansion, .nx-asset-expansion {
+    /* Inline fee/asset expansion */
+    .nx-expansion {
       background-color: #F8F8F7;
       padding: 14px 16px;
       display: flex;
       flex-direction: column;
       gap: 8px;
       font-family: 'Geist', system-ui, sans-serif;
-      animation: nx-expandIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
       overflow: hidden;
-    }
-    .nx-asset-expansion {
-      background-color: #F9F9F8;
-      padding: 16px;
-      gap: 16px;
+      animation: expandIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .nx-expansion-row {
       display: flex;
@@ -418,11 +514,15 @@
       font-weight: 500;
       font-variant-numeric: tabular-nums;
     }
-    @keyframes nx-expandIn {
+    @keyframes expandIn {
       from { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
-      to { opacity: 1; max-height: 320px; }
+      to   { opacity: 1; max-height: 360px; }
     }
+
+    /* Forced visibility for the rendered screen inside the React stage */
+    .stage .screen { display: flex !important; }
   </style>
+
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.24.4/babel.min.js"></script>
@@ -614,16 +714,13 @@ window._nxRunStepStagger = (screen) => {
 };
 
 
-    // ─── Behavior helpers (plain JS, no React) ───
-
+    // ─── DOM helpers (per-screen state binders & interaction wirers) ───
     const USABLE_BALANCE = 1240.55;
 
     function fmtAmount(n, d) {
       if (d == null) d = 2;
       return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
     }
-
-    // Find the amount text element in the currently-active asset row.
     function findActiveAmountEl(screen) {
       const cursor = screen.querySelector('.nx-cursor');
       if (!cursor) return null;
@@ -636,17 +733,13 @@ window._nxRunStepStagger = (screen) => {
       }
       return null;
     }
-
-    // Find the "≈ $X" text element in the active row.
     function findActiveUsdEl(screen) {
       const cursor = screen.querySelector('.nx-cursor');
       if (!cursor) return null;
       let row = cursor.parentElement;
-      const SCREEN_LIMIT = 10;
       let depth = 0;
-      while (row && row !== screen && depth < SCREEN_LIMIT) {
-        const candidates = Array.from(row.querySelectorAll('div'));
-        const usd = candidates.find(d => /^≈ \$[\d,\.]+/.test((d.textContent || '').trim()));
+      while (row && row !== screen && depth < 10) {
+        const usd = Array.from(row.querySelectorAll('div')).find(d => /^≈ \$[\d,\.]+/.test((d.textContent || '').trim()));
         if (usd) return usd;
         row = row.parentElement;
         depth++;
@@ -654,281 +747,175 @@ window._nxRunStepStagger = (screen) => {
       return null;
     }
 
-    // Wire 25/50/75/MAX buttons to update the active amount + USD line.
-    function wirePercentageButtons(screen) {
-      const buttons = screen.querySelectorAll('.nx-pct, .nx-max');
-      if (!buttons.length) return;
-      buttons.forEach(btn => {
-        const label = (btn.textContent || '').trim();
-        const pct = label === 'MAX' ? 1.0
-          : label === '75%' ? 0.75
-          : label === '50%' ? 0.50
-          : label === '25%' ? 0.25
-          : null;
-        if (pct === null) return;
-        // Re-find on click since DOM may have changed
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const amountEl = findActiveAmountEl(screen);
-          const usdEl = findActiveUsdEl(screen);
-          if (!amountEl) return;
-          const value = USABLE_BALANCE * pct;
-          amountEl.textContent = fmtAmount(value);
-          if (usdEl) usdEl.textContent = '≈ $' + fmtAmount(value);
-        });
+    // Replace the recipient text in any screen with the value from state.
+    function bindRecipient(screen, recipient) {
+      const recipientText = Array.from(screen.querySelectorAll('div')).find(d => {
+        const t = (d.textContent || '').trim();
+        return /^0x[a-fA-F\d…]+[a-fA-F\d]+$/.test(t) && d.children.length === 0;
       });
+      if (recipientText && recipientText.textContent.trim() !== recipient) {
+        recipientText.textContent = recipient;
+      }
     }
 
-    // Recipient inline edit.
-    function wireRecipientEdit(screen) {
-      // Find the Edit pill wrapper (nx-pill with text "Edit" inside)
-      const pills = Array.from(screen.querySelectorAll('div')).filter(el => {
-        const style = el.getAttribute('style') || '';
-        return style.includes('#E8F0FF') && style.includes('border-radius:999px') && /Edit/.test(el.textContent.trim());
-      });
-      pills.forEach(pill => {
-        // Find the recipient text element (a sibling-like div with text matching the 0x address)
-        const recipientText = Array.from(screen.querySelectorAll('div')).find(d => {
-          const t = (d.textContent || '').trim();
-          return /^0x[a-fA-F\d…]+[a-fA-F\d]+$/.test(t) && d.children.length === 0;
-        });
-        if (!recipientText) return;
-        let original = recipientText.textContent;
-
-        pill.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (recipientText.classList.contains('nx-editing')) return;
-          original = recipientText.textContent;
-          recipientText.contentEditable = 'true';
-          recipientText.classList.add('nx-editing');
-          recipientText.focus();
-          // Select all
-          const range = document.createRange();
-          range.selectNodeContents(recipientText);
-          const sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-        });
-
-        const finish = (save) => {
-          recipientText.classList.remove('nx-editing');
-          recipientText.contentEditable = 'false';
-          if (!save || !recipientText.textContent.trim()) {
-            recipientText.textContent = original;
-          }
-        };
-
-        recipientText.addEventListener('blur', () => finish(true));
-        recipientText.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') { e.preventDefault(); finish(true); recipientText.blur(); }
-          else if (e.key === 'Escape') { e.preventDefault(); finish(false); recipientText.blur(); }
-        });
-      });
+    // Token category map for picker filtering.
+    function tokenCategory(rowText) {
+      const t = rowText.toLowerCase();
+      if (/(^|\b)usdc|usdt/.test(t)) return 'stables';
+      if (/(^|\b)eth\b|ethereum/.test(t)) return 'native';
+      return 'other';
     }
 
-    // Token tab filter.
-    function wireTokenTabs(screen) {
+    // Filter picker rows based on the active tab.
+    function applyPickerFilter(screen, filter) {
+      const rows = screen.querySelectorAll('.nx-row');
+      rows.forEach(row => {
+        const cat = tokenCategory(row.textContent || '');
+        let show = true;
+        if (filter === 'native' && cat !== 'native') show = false;
+        else if (filter === 'stables' && cat !== 'stables') show = false;
+        else if (filter === 'custom') show = false;
+        row.style.display = show ? '' : 'none';
+        // Hide separator immediately after a hidden row, for cleanliness
+        const next = row.nextElementSibling;
+        if (next && /^\s*$/.test(next.textContent || '') && (next.getAttribute('style') || '').includes('background-color:#F0F0EF')) {
+          next.style.display = show ? '' : 'none';
+        }
+      });
+
+      // Update the visually-active tab styling
       const tabContainer = screen.querySelector('[style*="background-color:#F0F0EF"][style*="border-radius:12px"][style*="padding-block:4px"]');
       if (!tabContainer) return;
-      const allTabs = Array.from(tabContainer.children);
-      const rows = screen.querySelectorAll('.nx-row');
-      if (!rows.length) return;
-
-      const categoryFor = (row) => {
-        const text = (row.textContent || '').toLowerCase();
-        if (/usdc|usdt/.test(text)) return 'stables';
-        if (/eth\b|ethereum/.test(text)) return 'native';
-        return 'other';
-      };
-
-      function activateTab(label, clickedTab) {
-        // Visually mark this tab as active
-        allTabs.forEach(t => {
-          t.style.backgroundColor = '';
-          t.style.boxShadow = '';
-          t.style.borderRadius = '';
-          // Reset text color in tab to gray
-          const innerText = Array.from(t.querySelectorAll('div')).find(c => c.children.length === 0 && c.textContent.trim());
+      Array.from(tabContainer.children).forEach(tab => {
+        const lbl = (tab.textContent || '').trim().toLowerCase();
+        const innerText = Array.from(tab.querySelectorAll('div')).find(c => c.children.length === 0 && c.textContent.trim());
+        if (lbl === filter) {
+          tab.style.backgroundColor = '#FFFFFE';
+          tab.style.borderRadius = '9px';
+          tab.style.boxShadow = '#1616150A 0px 1px 2px';
+          if (innerText) {
+            innerText.style.color = '#161615';
+            innerText.style.fontFamily = '"Geist-SemiBold", "Geist", system-ui, sans-serif';
+          }
+        } else {
+          tab.style.backgroundColor = '';
+          tab.style.borderRadius = '';
+          tab.style.boxShadow = '';
           if (innerText) {
             innerText.style.color = '#848483';
             innerText.style.fontFamily = '"Geist-Medium", "Geist", system-ui, sans-serif';
           }
-        });
-        clickedTab.style.backgroundColor = '#FFFFFE';
-        clickedTab.style.borderRadius = '9px';
-        clickedTab.style.boxShadow = '#1616150A 0px 1px 2px';
-        const innerText = Array.from(clickedTab.querySelectorAll('div')).find(c => c.children.length === 0 && c.textContent.trim());
-        if (innerText) {
-          innerText.style.color = '#161615';
-          innerText.style.fontFamily = '"Geist-SemiBold", "Geist", system-ui, sans-serif';
         }
-
-        // Filter rows
-        rows.forEach(row => {
-          const cat = categoryFor(row);
-          let show = true;
-          if (label === 'native' && cat !== 'native') show = false;
-          else if (label === 'stables' && cat !== 'stables') show = false;
-          else if (label === 'custom') show = false;
-          row.style.display = show ? '' : 'none';
-
-          // Also hide the divider before/after if the row is hidden — for visual cleanliness
-          const next = row.nextElementSibling;
-          if (next && /^\s*$/.test(next.textContent) && (next.getAttribute('style') || '').includes('background-color:#F0F0EF')) {
-            next.style.display = show ? '' : 'none';
-          }
-        });
-      }
-
-      allTabs.forEach(tab => {
-        const label = (tab.textContent || '').trim().toLowerCase();
-        if (!['all', 'native', 'stables', 'custom'].includes(label)) return;
-        tab.addEventListener('click', (e) => {
-          e.stopPropagation();
-          activateTab(label, tab);
-        });
       });
     }
 
-    // "View Details" / "Hide Details" inline expansion on the confirm screen.
-    function wireViewDetails(screen) {
-      const links = screen.querySelectorAll('.nx-link');
-      links.forEach(link => {
-        const txt = (link.textContent || '').trim();
-        if (txt !== 'View Details' && txt !== 'Hide Details') return;
-
-        link.addEventListener('click', (e) => {
-          e.stopPropagation();
-          // Determine which row this link belongs to by looking for a sibling "You Swap" / "Total Fees" / etc. label
-          // Walk up until we find a row container with padding-block:16px and a left-side label.
-          let row = link.parentElement;
-          while (row && !((row.getAttribute('style') || '').includes('padding-block:16px')) && row !== screen) {
-            row = row.parentElement;
-          }
-          if (!row || row === screen) return;
-          const rowLabel = (Array.from(row.querySelectorAll('div')).find(d => d.children.length === 0 && d.textContent.trim().length > 0 && d.textContent.trim().length < 30)?.textContent || '').trim();
-
-          // Look for an existing expansion after this row
-          let expansion = row.nextElementSibling;
-          const isExpansion = expansion && (expansion.classList.contains('nx-fee-expansion') || expansion.classList.contains('nx-asset-expansion'));
-
-          if (isExpansion) {
-            expansion.remove();
-            updateLinkLabel(link, 'View Details');
-            return;
-          }
-
-          // Create the right kind of expansion
-          let html, cls;
-          if (/Total Fees/.test(rowLabel) || /Total Fees/.test(row.textContent)) {
-            cls = 'nx-fee-expansion';
-            html = '<div class="nx-expansion-row">Execution Gas fee <span class="nx-val">$0.05</span></div>' +
-                   '<div class="nx-expansion-row">Protocol fee <span class="nx-val">$0.00</span></div>' +
-                   '<div class="nx-expansion-row">Solver fee <span class="nx-val">$0.001</span></div>' +
-                   '<div class="nx-expansion-row">Gas sponsorship <span class="nx-val">$0.10</span></div>';
-          } else if (/You Swap/.test(rowLabel) || /You Swap/.test(row.textContent)) {
-            cls = 'nx-asset-expansion';
-            html = '<div class="nx-expansion-row" style="color:#161615;font-size:14px"><span>USDC <span style="color:#848483;margin-left:4px">Arbitrum</span></span><span class="nx-val">250 USDC <span style="color:#848483;font-weight:400;margin-left:6px">$250.50</span></span></div>' +
-                   '<div class="nx-expansion-row" style="color:#161615;font-size:14px"><span>ETH <span style="color:#848483;margin-left:4px">Optimism</span></span><span class="nx-val">0.435 ETH <span style="color:#848483;font-weight:400;margin-left:6px">$150.50</span></span></div>';
-          } else if (/Price Impact/.test(rowLabel) || /Price Impact/.test(row.textContent)) {
-            cls = 'nx-fee-expansion';
-            html = '<div class="nx-expansion-row">Swap impact <span class="nx-val" style="color:#1F8A4F">−0.04%</span></div>' +
-                   '<div class="nx-expansion-row">Max. slippage <span class="nx-val">Auto</span></div>' +
-                   '<div class="nx-expansion-row">Min. received <span class="nx-val">11.18 USDT</span></div>';
-          } else {
-            return;
-          }
-
-          expansion = document.createElement('div');
-          expansion.className = cls;
-          expansion.innerHTML = html;
-          row.insertAdjacentElement('afterend', expansion);
-
-          updateLinkLabel(link, 'Hide Details');
-        });
-      });
-    }
-    function updateLinkLabel(link, label) {
-      // The link wrapper is a flex with [text, svg]. Update the text child.
-      const textEl = Array.from(link.children).find(c => c.tagName === 'DIV' && c.children.length === 0);
-      if (textEl) textEl.textContent = label;
-      // Flip the chevron direction by rotating the SVG
-      const svg = link.querySelector('svg');
-      if (svg) {
-        svg.style.transform = label === 'Hide Details' ? 'rotate(180deg)' : '';
-        svg.style.transition = 'transform 0.18s ease';
-      }
-    }
-
-    // Find which slot (send/receive) a clicked element lives in.
-    window._nxFindSlot = function(el) {
-      let node = el;
-      const screen = el.closest('.screen');
+    // Find which slot a click element belongs to (send vs receive).
+    function findSlotForElement(el) {
+      const screen = el.closest ? el.closest('.screen') : null;
       if (!screen) return null;
-      // Climb up until we find a card (a parent with > 1 sibling label or with SEND/RECEIVE text near top)
+      let node = el;
       while (node && node !== screen) {
-        const labelEl = Array.from(node.children || []).find(c => {
-          const t = (c.textContent || '').trim();
-          return t === 'SEND' || t === 'RECEIVE';
-        });
-        if (labelEl) return labelEl.textContent.trim().toLowerCase();
-        // Check first descendant for a label
-        const firstLabel = node.querySelector ? Array.from(node.querySelectorAll('div')).find(d => {
-          const t = (d.textContent || '').trim();
-          return (t === 'SEND' || t === 'RECEIVE') && d.children.length === 0;
-        }) : null;
-        if (firstLabel && firstLabel.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) {
-          return firstLabel.textContent.trim().toLowerCase();
+        if (node.parentElement) {
+          const labels = node.parentElement.querySelectorAll('div');
+          for (const l of labels) {
+            const t = (l.textContent || '').trim();
+            if ((t === 'SEND' || t === 'RECEIVE') && l.children.length === 0) {
+              // Confirm the label appears BEFORE el in the DOM
+              if (l.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                return t.toLowerCase();
+              }
+            }
+          }
         }
         node = node.parentElement;
       }
       return null;
-    };
+    }
+    window.findSlotForElement = findSlotForElement;
 
-    window._nxWireBehaviors = function(screen) {
-      try { wirePercentageButtons(screen); } catch (e) { console.warn(e); }
-      try { wireRecipientEdit(screen); } catch (e) { console.warn(e); }
-      try { wireTokenTabs(screen); } catch (e) { console.warn(e); }
-      try { wireViewDetails(screen); } catch (e) { console.warn(e); }
-    };
-
-    // ─── In-flight step animation (20L-0) ───
-    // The screen ships with 5 step rows in this order:
-    //   [0] Verifying intent      (in-progress, spinner)
-    //   [1] Deposit transaction   (waiting, empty circle)
-    //   [2] Cross-chain proof failed (red X, retrying)
-    //   [3] Source signature verified (blue check)
-    //   [4] Liquidity intent confirmed (blue check)
-    //
-    // Animation script:
-    //   t=0     show "Verifying intent" only (others hidden)
-    //   t=1000  reveal "Source signature verified"
-    //   t=2000  reveal "Liquidity intent confirmed"
-    //   t=3000  reveal "Cross-chain proof failed"
-    //   t=3500  morph "Cross-chain proof failed" → verified (red → blue, X → check, text update)
-    //   t=4000  parent React effect navigates to success
-    window._nxAnimateInflightSteps = function(screen) {
-      const rows = Array.from(screen.querySelectorAll('.nx-step'));
-      if (rows.length < 5) return [];
-      const timers = [];
-
-      // Hide rows 1–4 (keep "Verifying intent" visible as the active step at t=0)
-      for (let i = 1; i < rows.length; i++) {
-        rows[i].style.opacity = '0';
-        rows[i].style.transform = 'translateY(8px)';
-        rows[i].style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+    // Inject/remove the inline fee or asset breakdown on the confirm screen.
+    function setFeeExpansion(screen, kind, expanded) {
+      // kind ∈ { 'fees', 'assets', 'priceImpact' }
+      // Find the row by its label text
+      const labelByKind = { fees: 'Total Fees', assets: 'You Swap', priceImpact: 'Price Impact' };
+      const target = labelByKind[kind];
+      if (!target) return;
+      const labelEl = Array.from(screen.querySelectorAll('div')).find(d =>
+        d.children.length === 0 && d.textContent.trim() === target
+      );
+      if (!labelEl) return;
+      // Walk up to find the row (parent with padding-block:16px)
+      let row = labelEl.parentElement;
+      while (row && !((row.getAttribute('style') || '').includes('padding-block:16px')) && row !== screen) {
+        row = row.parentElement;
       }
-      // Hide "Deposit transaction" entirely — not part of the animated sequence
+      if (!row || row === screen) return;
+
+      // Remove any existing expansion for this row
+      const next = row.nextElementSibling;
+      if (next && next.classList.contains('nx-expansion')) next.remove();
+
+      if (!expanded) return;
+
+      // Add the new expansion
+      const exp = document.createElement('div');
+      exp.className = 'nx-expansion';
+      if (kind === 'fees') {
+        exp.innerHTML =
+          '<div class="nx-expansion-row">Execution Gas fee <span class="nx-val">$0.05</span></div>' +
+          '<div class="nx-expansion-row">Protocol fee <span class="nx-val">$0.00</span></div>' +
+          '<div class="nx-expansion-row">Solver fee <span class="nx-val">$0.001</span></div>' +
+          '<div class="nx-expansion-row">Gas sponsorship <span class="nx-val">$0.10</span></div>';
+      } else if (kind === 'assets') {
+        exp.innerHTML =
+          '<div class="nx-expansion-row" style="color:#161615;font-size:14px"><span>USDC <span style="color:#848483;margin-left:6px;font-weight:400">Arbitrum</span></span><span class="nx-val">250 USDC <span style="color:#848483;font-weight:400;margin-left:6px">$250.50</span></span></div>' +
+          '<div class="nx-expansion-row" style="color:#161615;font-size:14px"><span>ETH <span style="color:#848483;margin-left:6px;font-weight:400">Optimism</span></span><span class="nx-val">0.435 ETH <span style="color:#848483;font-weight:400;margin-left:6px">$150.50</span></span></div>';
+      } else if (kind === 'priceImpact') {
+        exp.innerHTML =
+          '<div class="nx-expansion-row">Swap impact <span class="nx-val" style="color:#1F8A4F">−0.04%</span></div>' +
+          '<div class="nx-expansion-row">Max. slippage <span class="nx-val">Auto</span></div>' +
+          '<div class="nx-expansion-row">Min. received <span class="nx-val">11.18 USDT</span></div>';
+      }
+      row.insertAdjacentElement('afterend', exp);
+
+      // Flip the chevron in this row's "View Details" link, and rename it
+      const link = row.querySelector('.nx-link');
+      if (link) {
+        const textEl = Array.from(link.children).find(c => c.tagName === 'DIV' && c.children.length === 0);
+        if (textEl) textEl.textContent = expanded ? 'Hide Details' : 'View Details';
+        const svg = link.querySelector('svg');
+        if (svg) {
+          svg.style.transform = expanded ? 'rotate(180deg)' : '';
+          svg.style.transition = 'transform 0.18s ease';
+        }
+      }
+    }
+
+    // Reveal in-flight step rows based on the current step count.
+    // Sequence:
+    //   step 0: only "Verifying intent" visible
+    //   step 1: + "Source signature verified"
+    //   step 2: + "Liquidity intent confirmed"
+    //   step 3: + "Cross-chain proof failed" (red X, retrying)
+    //   step 4: morph the failed row to "verified" (blue check)
+    function applyInflightStep(screen, step) {
+      const rows = Array.from(screen.querySelectorAll('.nx-step'));
+      if (rows.length < 5) return;
+      const setVisible = (el, on) => {
+        el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        el.style.opacity = on ? '1' : '0';
+        el.style.transform = on ? 'translateY(0)' : 'translateY(8px)';
+      };
+      // Hide "Deposit transaction" entirely (not part of animated sequence)
       rows[1].style.display = 'none';
 
-      const reveal = (row) => { row.style.opacity = '1'; row.style.transform = 'translateY(0)'; };
+      setVisible(rows[0], true);                  // Verifying intent
+      setVisible(rows[3], step >= 1);             // Source signature verified
+      setVisible(rows[4], step >= 2);             // Liquidity intent confirmed
+      setVisible(rows[2], step >= 3);             // Cross-chain proof failed
 
-      timers.push(setTimeout(() => reveal(rows[3]), 1000)); // Source signature verified
-      timers.push(setTimeout(() => reveal(rows[4]), 2000)); // Liquidity intent confirmed
-      timers.push(setTimeout(() => reveal(rows[2]), 3000)); // Cross-chain proof failed
-
-      // Morph cross-chain row from "failed (red X)" → "verified (blue check)"
-      timers.push(setTimeout(() => {
+      if (step >= 4) {
+        // Morph the cross-chain row from "failed (red X)" to "verified (blue check)"
         const failedRow = rows[2];
         const statusBg = Array.from(failedRow.querySelectorAll('div')).find(d => {
           const s = d.getAttribute('style') || '';
@@ -938,62 +925,315 @@ window._nxRunStepStagger = (screen) => {
           statusBg.style.transition = 'background-color 0.4s ease';
           statusBg.style.backgroundColor = '#3D7BFF';
           const svg = statusBg.querySelector('svg');
-          if (svg) {
-            svg.innerHTML = '<path d="M2.5 6L5 8.5L9.5 4" stroke="#FFFFFE" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />';
-          }
+          if (svg) svg.innerHTML = '<path d="M2.5 6L5 8.5L9.5 4" stroke="#FFFFFE" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />';
         }
-        const titleEl = Array.from(failedRow.querySelectorAll('div')).find(d =>
-          d.children.length === 0 && d.textContent.trim() === 'Cross-chain proof failed'
-        );
+        const titleEl = Array.from(failedRow.querySelectorAll('div')).find(d => d.children.length === 0 && /Cross-chain proof failed/.test(d.textContent));
         if (titleEl) titleEl.textContent = 'Cross-chain proof verified';
-        const subEl = Array.from(failedRow.querySelectorAll('div')).find(d =>
-          d.children.length === 0 && /Retrying/.test(d.textContent)
-        );
+        const subEl = Array.from(failedRow.querySelectorAll('div')).find(d => d.children.length === 0 && /Retrying/.test(d.textContent));
         if (subEl) {
           subEl.style.transition = 'color 0.4s ease';
           subEl.style.color = '#848483';
           subEl.textContent = 'Confirmed · just now';
         }
-      }, 3500));
+      }
+    }
 
-      return timers;
+    // Wire 25/50/75/MAX onto the active amount + USD line, and dispatch SET_AMOUNT.
+    function wirePercentageButtons(screen, dispatch) {
+      const buttons = screen.querySelectorAll('.nx-pct, .nx-max');
+      buttons.forEach(btn => {
+        const lbl = (btn.textContent || '').trim();
+        const pct = lbl === 'MAX' ? 1.0 : lbl === '75%' ? 0.75 : lbl === '50%' ? 0.50 : lbl === '25%' ? 0.25 : null;
+        if (pct == null) return;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = USABLE_BALANCE * pct;
+          if (dispatch) dispatch({ type: 'SET_AMOUNT', amount: fmtAmount(value) });
+          // Immediate visual update (state-driven update will reinforce)
+          const amountEl = findActiveAmountEl(screen);
+          const usdEl = findActiveUsdEl(screen);
+          if (amountEl) amountEl.textContent = fmtAmount(value);
+          if (usdEl) usdEl.textContent = '≈ $' + fmtAmount(value);
+        });
+      });
+    }
+
+    // Wire Edit pill to inline-editable recipient.
+    function wireRecipientEdit(screen, dispatch) {
+      const editPills = Array.from(screen.querySelectorAll('div')).filter(el => {
+        const style = el.getAttribute('style') || '';
+        return style.includes('#E8F0FF') && style.includes('border-radius:999px') && /Edit/.test(el.textContent.trim());
+      });
+      const recipientText = Array.from(screen.querySelectorAll('div')).find(d => {
+        const t = (d.textContent || '').trim();
+        return /^0x[a-fA-F\d…]+[a-fA-F\d]+$/.test(t) && d.children.length === 0;
+      });
+      if (!recipientText) return;
+      let original = recipientText.textContent;
+      editPills.forEach(pill => {
+        pill.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (recipientText.classList.contains('nx-editing')) return;
+          original = recipientText.textContent;
+          recipientText.contentEditable = 'true';
+          recipientText.classList.add('nx-editing');
+          recipientText.focus();
+          const range = document.createRange();
+          range.selectNodeContents(recipientText);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        });
+      });
+      const finish = (save) => {
+        recipientText.classList.remove('nx-editing');
+        recipientText.contentEditable = 'false';
+        const newVal = recipientText.textContent.trim();
+        if (!save || !newVal) {
+          recipientText.textContent = original;
+        } else if (dispatch) {
+          dispatch({ type: 'SET_RECIPIENT', recipient: newVal });
+        }
+      };
+      recipientText.addEventListener('blur', () => finish(true));
+      recipientText.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); finish(true); recipientText.blur(); }
+        else if (e.key === 'Escape') { e.preventDefault(); finish(false); recipientText.blur(); }
+      });
+    }
+
+    // Wire picker tab clicks → dispatch SET_PICKER_FILTER
+    function wirePickerTabs(screen, dispatch) {
+      const tabContainer = screen.querySelector('[style*="background-color:#F0F0EF"][style*="border-radius:12px"][style*="padding-block:4px"]');
+      if (!tabContainer) return;
+      Array.from(tabContainer.children).forEach(tab => {
+        const label = (tab.textContent || '').trim().toLowerCase();
+        if (!['all', 'native', 'stables', 'custom'].includes(label)) return;
+        tab.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (dispatch) dispatch({ type: 'SET_PICKER_FILTER', filter: label });
+        });
+      });
+    }
+
+    // Wire View Details / Hide Details clicks → dispatch toggle
+    function wireDetailsLinks(screen, dispatch) {
+      const links = screen.querySelectorAll('.nx-link');
+      links.forEach(link => {
+        const initialText = (link.textContent || '').trim();
+        if (initialText !== 'View Details' && initialText !== 'Hide Details') return;
+        link.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Determine which row this is by looking at the row label
+          let row = link.parentElement;
+          while (row && !((row.getAttribute('style') || '').includes('padding-block:16px')) && row !== screen) {
+            row = row.parentElement;
+          }
+          if (!row) return;
+          const labelEl = Array.from(row.querySelectorAll('div')).find(d => d.children.length === 0 && d.textContent.trim().length < 30);
+          const label = labelEl ? labelEl.textContent.trim() : '';
+          let kind = null;
+          if (/Total Fees/.test(label) || /Total Fees/.test(row.textContent)) kind = 'fees';
+          else if (/You Swap/.test(label) || /You Swap/.test(row.textContent)) kind = 'assets';
+          else if (/Price Impact/.test(label) || /Price Impact/.test(row.textContent)) kind = 'priceImpact';
+          if (kind && dispatch) dispatch({ type: 'TOGGLE_DETAILS', kind });
+        });
+      });
+    }
+
+    window._nxApplyScreenState = function(screen, id, state, dispatch) {
+      // Tag (idempotent — adds classes only if not yet present)
+      try { tagScreenInteractive(screen); } catch (e) {}
+      try { window._nxRunCountUps && window._nxRunCountUps(screen); } catch (e) {}
+      try { window._nxRunStepStagger && window._nxRunStepStagger(screen); } catch (e) {}
+
+      // ── Wire interactions (idempotent: only attach once per element via dataset flag)
+      const wireOnce = (el, attr, fn) => {
+        if (!el || el.dataset[attr]) return;
+        el.dataset[attr] = '1';
+        fn(el);
+      };
+      wireOnce(screen, 'wired', (s) => {
+        wirePercentageButtons(s, dispatch);
+        wireRecipientEdit(s, dispatch);
+        wirePickerTabs(s, dispatch);
+        wireDetailsLinks(s, dispatch);
+      });
+
+      // ── Apply state ─────────────────────────────────────────────
+      if (state.recipient) bindRecipient(screen, state.recipient);
+
+      // Per-screen state bindings
+      const isPicker = ['YC-0', '1QQ-0', '1N1-0', '1US-0'].includes(id);
+      if (isPicker && state.pickerFilter) {
+        applyPickerFilter(screen, state.pickerFilter);
+      }
+
+      const isMultiAsset = ['30R-0', '1-0', 'GK-0', '2PX-0', '2TG-0', '2LH-0'].includes(id);
+      if (isMultiAsset && state.amount && state.amount !== '0') {
+        const amountEl = findActiveAmountEl(screen);
+        const usdEl = findActiveUsdEl(screen);
+        if (amountEl) amountEl.textContent = state.amount;
+        if (usdEl) usdEl.textContent = '≈ $' + state.amount;
+      }
+
+      const isConfirm = ['1DB-0', '1FN-0', '1I6-0'].includes(id);
+      if (isConfirm) {
+        // Remove any existing expansions, then re-add per state
+        screen.querySelectorAll('.nx-expansion').forEach(e => e.remove());
+        if (state.detailsExpanded === 'fees') setFeeExpansion(screen, 'fees', true);
+        else if (state.detailsExpanded === 'assets') setFeeExpansion(screen, 'assets', true);
+        else if (state.detailsExpanded === 'priceImpact') setFeeExpansion(screen, 'priceImpact', true);
+      }
+
+      const isPending = id === '20L-0';
+      if (isPending && state.pendingStep != null) {
+        applyInflightStep(screen, state.pendingStep);
+      }
     };
   </script>
 
   <script type="text/babel" data-presets="react">
-    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+    const { useState, useEffect, useRef, useCallback, useMemo, useReducer } = React;
 
-    // ─── Screen component — wraps each artboard's HTML and applies interactions ───
-    function Screen({ id, onAction }) {
+    // ─────────────────────────────────────────────────────────────
+    // State machine
+    // ─────────────────────────────────────────────────────────────
+
+    const MODE_SCREEN = {
+      empty:      '3H-0',
+      oneAsset:   '30R-0',
+      twoAssets:  '1-0',
+      overflow:   '2LH-0',
+      confirm:    '1DB-0',
+      pending:    '20L-0',
+      success:    '11W-0',
+      history:    '184-0',
+    };
+
+    const OVERLAY_SCREEN = {
+      assetPickerSend:    'YC-0',
+      assetPickerReceive: '1N1-0',
+      chainPicker:        '1KX-0',
+    };
+
+    const initialState = {
+      mode: 'empty',
+      overlay: null,
+      sendAssets: [],
+      receiveAsset: { symbol: 'USDT', chain: 'arb' },
+      amount: '0',
+      recipient: '0xF3a1…9b2E',
+      pickerFilter: 'all',
+      pickerSlot: null,           // 'send' or 'receive' — remembered when opening picker
+      detailsExpanded: null,      // null | 'fees' | 'assets' | 'priceImpact'
+      pendingStep: 0,             // 0..4
+      transitionKind: 'slide',    // 'slide' | 'fade'
+    };
+
+    function modeFromSendAssets(len) {
+      if (len === 0) return 'empty';
+      if (len === 1) return 'oneAsset';
+      if (len === 2) return 'twoAssets';
+      return 'overflow';
+    }
+
+    function reducer(state, action) {
+      switch (action.type) {
+        case 'SET_MODE':
+          return { ...state, mode: action.mode, overlay: null, transitionKind: 'slide' };
+        case 'OPEN_OVERLAY':
+          return { ...state, overlay: action.overlay, pickerSlot: action.slot || state.pickerSlot, transitionKind: 'fade' };
+        case 'CLOSE_OVERLAY':
+          return { ...state, overlay: null, transitionKind: 'fade' };
+        case 'ADD_ASSET': {
+          const next = [...state.sendAssets, action.asset];
+          return { ...state, sendAssets: next, mode: modeFromSendAssets(next.length), overlay: null, transitionKind: 'slide' };
+        }
+        case 'REMOVE_ASSET': {
+          const next = state.sendAssets.filter((_, i) => i !== action.idx);
+          return { ...state, sendAssets: next, mode: modeFromSendAssets(next.length), transitionKind: 'slide' };
+        }
+        case 'SET_RECEIVE_ASSET':
+          return { ...state, receiveAsset: action.asset, overlay: null, transitionKind: 'fade' };
+        case 'SET_AMOUNT':
+          return { ...state, amount: action.amount };
+        case 'SET_RECIPIENT':
+          return { ...state, recipient: action.recipient };
+        case 'SET_PICKER_FILTER':
+          return { ...state, pickerFilter: action.filter };
+        case 'TOGGLE_DETAILS': {
+          const next = state.detailsExpanded === action.kind ? null : action.kind;
+          return { ...state, detailsExpanded: next };
+        }
+        case 'ADVANCE_PENDING':
+          return { ...state, pendingStep: Math.min(state.pendingStep + 1, 4) };
+        case 'SET_PENDING_STEP':
+          return { ...state, pendingStep: action.step };
+        case 'GO_CONFIRM':
+          return { ...state, mode: 'confirm', overlay: null, detailsExpanded: null, transitionKind: 'slide' };
+        case 'GO_PENDING':
+          return { ...state, mode: 'pending', overlay: null, pendingStep: 0, transitionKind: 'slide' };
+        case 'GO_SUCCESS':
+          return { ...state, mode: 'success', overlay: null, transitionKind: 'slide' };
+        case 'RESET':
+          return { ...initialState, recipient: state.recipient };
+        default:
+          return state;
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Screen + 22 named components
+    // ─────────────────────────────────────────────────────────────
+
+    function Screen({ id, state, dispatch }) {
       const ref = useRef(null);
 
       useEffect(() => {
         if (!ref.current) return;
-        try { tagScreenInteractive(ref.current); } catch (e) {}
-        try { window._nxRunCountUps && window._nxRunCountUps(ref.current); } catch (e) {}
-        try { window._nxRunStepStagger && window._nxRunStepStagger(ref.current); } catch (e) {}
-        try { window._nxWireBehaviors && window._nxWireBehaviors(ref.current); } catch (e) {}
-
-        // In-flight expanded screen: animate the step sequence
-        let inflightTimers = [];
-        if (id === "20L-0" && window._nxAnimateInflightSteps) {
-          inflightTimers = window._nxAnimateInflightSteps(ref.current) || [];
-        }
-        return () => {
-          // Cancel any pending step-reveal timers if the screen unmounts early
-          inflightTimers.forEach(t => clearTimeout(t));
-        };
-      }, [id]);
+        window._nxApplyScreenState(ref.current, id, state, dispatch);
+      });  // run after every state change
 
       const handleClick = useCallback((e) => {
-        if (!onAction) return;
-        // If the click hit something we already wired up locally, the local handler called stopPropagation.
-        // For the remaining unwired clicks, find the nearest meaningful element + pass text + element up.
         const node = e.target.closest('div, button, a, span');
         if (!node) return;
         const text = (node.textContent || '').trim();
-        if (text.length > 0 && text.length < 80) onAction(text, node);
-      }, [onAction]);
+        if (text.length === 0 || text.length > 80) return;
+
+        // ── Navigation triggers ──
+        if (text === 'Review swap' || text === 'Confirm swap') {
+          dispatch({ type: 'GO_CONFIRM' });
+        } else if (text === 'Swap now') {
+          dispatch({ type: 'GO_PENDING' });
+        } else if (text === 'Done') {
+          // Two contexts:
+          //   in picker → close + add an asset to the appropriate slot
+          //   on success → reset
+          if (state.overlay === 'assetPickerSend' || state.overlay === 'assetPickerSendUnified') {
+            // Add a sensible default asset (deterministic for demo)
+            const newAsset = pickDefaultSendAsset(state.sendAssets.length);
+            dispatch({ type: 'ADD_ASSET', asset: newAsset });
+          } else if (state.overlay === 'assetPickerReceive' || state.overlay === 'assetPickerReceiveInfo') {
+            dispatch({ type: 'SET_RECEIVE_ASSET', asset: { symbol: 'USDT', chain: 'arb' } });
+          } else if (state.overlay === 'chainPicker') {
+            dispatch({ type: 'CLOSE_OVERLAY' });
+          } else if (state.mode === 'success') {
+            dispatch({ type: 'RESET' });
+          } else {
+            dispatch({ type: 'CLOSE_OVERLAY' });
+          }
+        } else if (text === '+ Add asset' || text === 'Add asset') {
+          dispatch({ type: 'OPEN_OVERLAY', overlay: 'assetPickerSend', slot: 'send' });
+        } else if (text === 'Select asset' || text === '+ Select asset' || text === 'Assets' || text === '+ Assets') {
+          const slot = window.findSlotForElement ? window.findSlotForElement(node) : 'send';
+          if (slot === 'receive') {
+            dispatch({ type: 'OPEN_OVERLAY', overlay: 'assetPickerReceive', slot: 'receive' });
+          } else {
+            dispatch({ type: 'OPEN_OVERLAY', overlay: 'assetPickerSend', slot: 'send' });
+          }
+        }
+      }, [state, dispatch]);
 
       return (
         <section
@@ -1006,7 +1246,19 @@ window._nxRunStepStagger = (screen) => {
       );
     }
 
-    // ─── Named components ───
+    // Pick a default asset to add based on how many already exist.
+    function pickDefaultSendAsset(count) {
+      const palette = [
+        { symbol: 'ETH',  chain: 'op',  amount: '0.05' },
+        { symbol: 'USDC', chain: 'arb', amount: '250'  },
+        { symbol: 'USDT', chain: 'op',  amount: '100'  },
+        { symbol: 'USDC', chain: 'base',amount: '180'  },
+        { symbol: 'ETH',  chain: 'base',amount: '0.05' },
+      ];
+      return palette[count % palette.length];
+    }
+
+    // The 22 named screens (preserved for browsing via the dev toolbar)
     const SwapEmpty              = (p) => <Screen id="3H-0" {...p} />;
     const SwapEmptyVariantB      = (p) => <Screen id="4X-0" {...p} />;
     const SwapEmptyVariantC      = (p) => <Screen id="7G-0" {...p} />;
@@ -1030,136 +1282,131 @@ window._nxRunStepStagger = (screen) => {
     const MultiAssetViewAll      = (p) => <Screen id="2TG-0" {...p} />;
     const MultiAssetOverflow     = (p) => <Screen id="2LH-0" {...p} />;
 
-    const FLOW = [
-      { id: "3H-0",   name: "1. Empty (a)",                   Component: SwapEmpty },
-      { id: "4X-0",   name: "2. Empty (b)",                   Component: SwapEmptyVariantB },
-      { id: "7G-0",   name: "3. Empty (c)",                   Component: SwapEmptyVariantC },
-      { id: "30R-0",  name: "4. Multi-asset · 1 asset",       Component: MultiAssetSingle },
-      { id: "1-0",    name: "5. Multi-asset · 2 assets",      Component: MultiAssetTwoFilled },
-      { id: "GK-0",   name: "6. Multi-asset · 2 assets (v)",  Component: MultiAssetTwoVariant },
-      { id: "YC-0",   name: "7. Source picker",               Component: AssetPickerSend },
-      { id: "1QQ-0",  name: "8. Source picker · unified",     Component: AssetPickerSendUnified },
-      { id: "1N1-0",  name: "9. Destination picker",          Component: AssetPickerReceive },
-      { id: "1US-0",  name: "10. Destination picker · info",  Component: AssetPickerReceiveInfo },
-      { id: "1KX-0",  name: "11. Select chain",               Component: ChainPicker },
-      { id: "1DB-0",  name: "12. Confirm swap",               Component: ConfirmSwap },
-      { id: "1FN-0",  name: "13. Confirm · fees detail",      Component: ConfirmSwapFeesDetail },
-      { id: "1I6-0",  name: "14. Confirm · assets detail",    Component: ConfirmSwapAssetsDetail },
-      { id: "25P-0",  name: "15. In-flight",                  Component: SwapPending },
-      { id: "20L-0",  name: "16. In-flight · steps expanded", Component: SwapPendingExpanded },
-      { id: "11W-0",  name: "17. Transaction successful",     Component: SwapComplete },
-      { id: "13M-0",  name: "18. Successful · 10+ assets",    Component: SwapCompleteMultiAsset },
-      { id: "184-0",  name: "19. Transaction history",        Component: TransactionHistory },
-      { id: "2PX-0",  name: "20. Multi-asset · variant",      Component: MultiAssetVariant },
-      { id: "2TG-0",  name: "21. Multi-asset · view all",     Component: MultiAssetViewAll },
-      { id: "2LH-0",  name: "22. Multi-asset · 5+ assets",    Component: MultiAssetOverflow },
-    ];
+    // ─────────────────────────────────────────────────────────────
+    // Dev toolbar
+    // ─────────────────────────────────────────────────────────────
 
-    const idxOf = (id) => FLOW.findIndex(f => f.id === id);
-    const FIRST_EMPTY    = idxOf("3H-0");
-    const ONE_ASSET      = idxOf("30R-0");
-    const TWO_ASSETS     = idxOf("1-0");
-    const SEND_PICKER    = idxOf("YC-0");
-    const RECEIVE_PICKER = idxOf("1N1-0");
-    const CONFIRM        = idxOf("1DB-0");
-    const PENDING        = idxOf("20L-0");
-    const SUCCESS        = idxOf("11W-0");
+    function DevBar({ state, dispatch }) {
+      const modeBtn = (mode, label) => (
+        <button
+          key={mode}
+          className={'devbar-btn' + (state.mode === mode ? ' active' : '')}
+          onClick={() => dispatch({ type: 'SET_MODE', mode })}
+        >
+          {label}
+        </button>
+      );
+      const overlayBtn = (ov, label, slot) => (
+        <button
+          key={ov}
+          className={'devbar-btn' + (state.overlay === ov ? ' active' : '')}
+          onClick={() => dispatch({ type: 'OPEN_OVERLAY', overlay: ov, slot })}
+        >
+          {label}
+        </button>
+      );
+      return (
+        <div className="devbar">
+          <div className="devbar-group">
+            <span className="devbar-label">Mode</span>
+            {modeBtn('empty', 'Empty')}
+            {modeBtn('oneAsset', '1 Asset')}
+            {modeBtn('twoAssets', '2 Assets')}
+            {modeBtn('overflow', '5+ Assets')}
+            {modeBtn('confirm', 'Confirm')}
+            {modeBtn('pending', 'Pending')}
+            {modeBtn('success', 'Success')}
+            {modeBtn('history', 'History')}
+          </div>
+          <div className="devbar-group">
+            <span className="devbar-label">Overlay</span>
+            {overlayBtn('assetPickerSend', 'Source Picker', 'send')}
+            {overlayBtn('assetPickerReceive', 'Receive Picker', 'receive')}
+            {overlayBtn('chainPicker', 'Chain Picker', null)}
+            {state.overlay && (
+              <button className="devbar-btn" onClick={() => dispatch({ type: 'CLOSE_OVERLAY' })}>
+                Close overlay
+              </button>
+            )}
+          </div>
+          <div className="devbar-group">
+            <span className="devbar-label">Actions</span>
+            <button className="devbar-btn" onClick={() => dispatch({ type: 'ADD_ASSET', asset: pickDefaultSendAsset(state.sendAssets.length) })}>
+              Add asset
+            </button>
+            <button className="devbar-btn" onClick={() => dispatch({ type: 'TOGGLE_DETAILS', kind: 'fees' })}>
+              Toggle fees detail
+            </button>
+            <button className="devbar-btn" onClick={() => dispatch({ type: 'TOGGLE_DETAILS', kind: 'assets' })}>
+              Toggle assets detail
+            </button>
+            <button className="devbar-btn danger" onClick={() => dispatch({ type: 'RESET' })}>
+              Reset
+            </button>
+          </div>
+          <div className="devbar-state">
+            <span className="k">mode</span>=<span className="v">"{state.mode}"</span>
+            {'  '}<span className="k">overlay</span>=<span className="v">{state.overlay ? '"' + state.overlay + '"' : 'null'}</span>
+            {'  '}<span className="k">sendAssets</span>=<span className="v">[{state.sendAssets.length}]</span>
+            {'  '}<span className="k">amount</span>=<span className="v">"{state.amount}"</span>
+            {'  '}<span className="k">recipient</span>=<span className="v">"{state.recipient}"</span>
+            {'  '}<span className="k">pickerFilter</span>=<span className="v">"{state.pickerFilter}"</span>
+            {'  '}<span className="k">detailsExpanded</span>=<span className="v">{state.detailsExpanded ? '"' + state.detailsExpanded + '"' : 'null'}</span>
+            {'  '}<span className="k">pendingStep</span>=<span className="v">{state.pendingStep}</span>
+          </div>
+        </div>
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // App
+    // ─────────────────────────────────────────────────────────────
 
     function App() {
-      const [idx, setIdx] = useState(0);
-      const [direction, setDirection] = useState('forward');
-      const [transitionState, setTransitionState] = useState('entered');
+      const [state, dispatch] = useReducer(reducer, initialState);
 
-      // Cross-screen state for the asset-selection flow:
-      //   pickerMode: 'initial' when entering picker from a blank send slot,
-      //               'addAsset' when entering from a "+ Add asset" click on a filled state.
-      const pickerModeRef = useRef('initial');
-
-      const navigate = useCallback((newIdx, dir) => {
-        if (newIdx === idx) return;
-        setDirection(dir);
-        setTransitionState('entering-' + dir);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setIdx(newIdx);
-            setTransitionState('entered');
-          });
-        });
-      }, [idx]);
-
-      const next = useCallback(() => navigate((idx + 1) % FLOW.length, 'forward'), [idx, navigate]);
-      const back = useCallback(() => navigate((idx - 1 + FLOW.length) % FLOW.length, 'back'), [idx, navigate]);
-
-      // Auto-advance from in-flight (animated steps) → success after 4s
+      // Pending screen: animate the step sequence then auto-advance to success.
       useEffect(() => {
-        const currentId = FLOW[idx].id;
-        if (currentId === "20L-0") {
-          const t = setTimeout(() => navigate(SUCCESS, 'forward'), 4000);
-          return () => clearTimeout(t);
-        }
-      }, [idx, navigate]);
+        if (state.mode !== 'pending') return;
+        const t1 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 1 }), 1000);
+        const t2 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 2 }), 2000);
+        const t3 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 3 }), 3000);
+        const t4 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 4 }), 3500);
+        const t5 = setTimeout(() => dispatch({ type: 'GO_SUCCESS' }), 4000);
+        return () => [t1, t2, t3, t4, t5].forEach(clearTimeout);
+      }, [state.mode]);
 
-      const onAction = useCallback((text, node) => {
-        const currentId = FLOW[idx].id;
-
-        // ── Navigation triggers ──
-        if (text === 'Review swap' || text === 'Confirm swap') {
-          navigate(CONFIRM, 'forward');
-          return;
-        }
-        if (text === 'Swap now') {
-          navigate(PENDING, 'forward');
-          return;
-        }
-        if (text === 'Done') {
-          // Two contexts:
-          //   1) Done in an asset picker → close picker, advance to multi-asset.
-          //   2) Done on the success screen → return to empty.
-          if (['YC-0', '1QQ-0', '1N1-0', '1US-0', '1KX-0'].includes(currentId)) {
-            // Picker → multi-asset state
-            const target = pickerModeRef.current === 'addAsset' ? TWO_ASSETS : ONE_ASSET;
-            pickerModeRef.current = 'initial';
-            navigate(target, 'back');
-          } else {
-            navigate(FIRST_EMPTY, 'back');
-          }
-          return;
-        }
-        if (text === '+ Add asset' || text === 'Add asset') {
-          pickerModeRef.current = 'addAsset';
-          navigate(SEND_PICKER, 'forward');
-          return;
-        }
-        if (text === 'Select asset' || text === '+ Select asset' || text === 'Assets' || text === '+ Assets') {
-          pickerModeRef.current = 'initial';
-          // Detect which slot was clicked
-          const slot = window._nxFindSlot ? window._nxFindSlot(node) : null;
-          navigate(slot === 'receive' ? RECEIVE_PICKER : SEND_PICKER, 'forward');
-          return;
-        }
-      }, [idx, navigate]);
-
-      const Current = FLOW[idx].Component;
+      const modeId = MODE_SCREEN[state.mode] || '3H-0';
+      const overlayId = state.overlay ? OVERLAY_SCREEN[state.overlay] : null;
 
       return (
-        <>
-          <div className="proto-controls">
-            <button className="proto-btn" onClick={back}>← Back</button>
-            <span className="proto-name">{FLOW[idx].name}</span>
-            <button className="proto-btn" onClick={next}>Next →</button>
-          </div>
+        <div className="app">
+          <DevBar state={state} dispatch={dispatch} />
 
-          <div className="proto-frame">
-            <div
-              key={FLOW[idx].id + '-' + transitionState}
-              className={'proto-screen-wrap ' + transitionState}
-            >
-              <Current onAction={onAction} />
+          <div className="phone-frame">
+            <div className="dynamic-island" />
+            <div className="phone-viewport">
+              <div className="phone-scale">
+
+                <div className="stage">
+                  <div key={'mode-' + state.mode} className="mode-screen slide-enter">
+                    <Screen id={modeId} state={state} dispatch={dispatch} />
+                  </div>
+
+                  {overlayId && (
+                    <>
+                      <div className="overlay-dim" onClick={() => dispatch({ type: 'CLOSE_OVERLAY' })} />
+                      <div key={'ov-' + state.overlay} className="overlay-stage fade-enter">
+                        <Screen id={overlayId} state={state} dispatch={dispatch} />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+              </div>
             </div>
           </div>
-
-          <div className="proto-step">Step {idx + 1} of {FLOW.length}</div>
-        </>
+        </div>
       );
     }
 
