@@ -178,20 +178,21 @@
     }
     .nx-xdel {
       cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
-      transition: background-color 0.15s ease, transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease !important;
-    }
-    .nx-xdel.nx-xdel-visible {
       opacity: 1;
       pointer-events: auto;
+      transition: background-color 0.15s ease, transform 0.15s cubic-bezier(0.22, 1, 0.36, 1) !important;
     }
-    .nx-xdel.nx-xdel-visible:hover {
+    .nx-xdel:hover {
       background-color: #FFD9D9 !important;
       transform: scale(1.15) !important;
     }
-    .nx-xdel.nx-xdel-visible:active {
+    .nx-xdel:active {
       transform: scale(0.88) !important;
+    }
+    /* Picker row: clear selected state — light blue tint + 3px blue left border */
+    .nx-row.nx-row-selected {
+      background-color: #F4F8FF !important;
+      box-shadow: inset 3px 0 0 0 #006BF4 !important;
     }
     .nx-max {
       cursor: pointer;
@@ -1090,7 +1091,229 @@ window._nxRunStepStagger = (screen) => {
       if (isPending && state.pendingStep != null) {
         applyInflightStep(screen, state.pendingStep);
       }
+
+      // ── Design refinements (idempotent visual polish across screens) ──
+      try { applyDesignRefinements(screen, id); } catch (e) { console.warn('refinements:', e); }
     };
+
+    // ─────────────────────────────────────────────────────────────
+    // Design refinements (post-mount visual polish)
+    // ─────────────────────────────────────────────────────────────
+    function applyDesignRefinements(screen, id) {
+      // ── 2. Fix RECEIVE USD estimate on multi-asset screens ──
+      //    The hardcoded "≈ $500.50" in the RECEIVE card doesn't match the
+      //    displayed 400.50 USDT amount. Coerce it to match (1 USDT ≈ $1).
+      if (['1-0', '30R-0', 'GK-0', '2PX-0', '2TG-0', '2LH-0'].includes(id)) {
+        const receiveLabel = Array.from(screen.querySelectorAll('div')).find(d =>
+          d.children.length === 0 && d.textContent.trim() === 'RECEIVE'
+        );
+        if (receiveLabel) {
+          let card = receiveLabel.parentElement;
+          let hop = 0;
+          while (card && hop++ < 6 && !((card.getAttribute('style') || '').includes('border-radius:14px'))) {
+            card = card.parentElement;
+          }
+          if (card) {
+            const amtBig = Array.from(card.querySelectorAll('div')).find(d =>
+              d.children.length === 0 && /^[\d,]+(\.\d+)?$/.test((d.textContent || '').trim())
+            );
+            const target = amtBig ? amtBig.textContent.trim() : '400.50';
+            Array.from(card.querySelectorAll('div')).forEach(d => {
+              if (d.children.length !== 0) return;
+              if (/^≈ \$500\.50$/.test((d.textContent || '').trim())) {
+                d.textContent = '≈ $' + target;
+              }
+            });
+          }
+        }
+      }
+
+      // ── 7. Increase letter-spacing on SEND/RECEIVE/RECIPIENT labels ──
+      Array.from(screen.querySelectorAll('div')).forEach(d => {
+        if (d.children.length !== 0) return;
+        const t = (d.textContent || '').trim();
+        if (t === 'SEND' || t === 'RECEIVE' || t === 'RECIPIENT') {
+          d.style.letterSpacing = '0.14em';
+        }
+      });
+
+      // ── 8. Tooltip on ↕ toggle icons next to USD values ──
+      screen.querySelectorAll('svg').forEach(svg => {
+        const paths = svg.querySelectorAll('path');
+        if (paths.length !== 2) return;
+        // Both paths shaped like vertical strokes with arrow heads (toggle icon)
+        const ds = Array.from(paths).map(p => p.getAttribute('d') || '');
+        if (!ds.every(d => /M[\d.]+\s+[\d.]+[VL]/.test(d))) return;
+        const parent = svg.parentElement;
+        if (parent && !parent.getAttribute('title')) {
+          parent.setAttribute('title', 'Toggle USD / token display');
+          parent.style.cursor = 'help';
+        }
+      });
+
+      // ── 6. Cap chain badges at ≤40% of their parent token icon ──
+      Array.from(screen.querySelectorAll('div')).forEach(badge => {
+        const style = badge.getAttribute('style') || '';
+        if (!style.includes('position:absolute')) return;
+        if (!style.includes('border-radius:999px')) return;
+        if (!/bottom:\s*-?\d/.test(style)) return;
+        if (!/right:\s*-?\d/.test(style)) return;
+        const parent = badge.parentElement;
+        if (!parent) return;
+        const parentStyle = parent.getAttribute('style') || '';
+        const pw = parseInt((parentStyle.match(/width:(\d+)px/) || [])[1], 10);
+        if (!pw) return;
+        const cw = parseInt((style.match(/width:(\d+)px/) || [])[1], 10);
+        if (!cw) return;
+        const maxSize = Math.floor(pw * 0.4);
+        if (cw > maxSize) {
+          badge.style.width = maxSize + 'px';
+          badge.style.height = maxSize + 'px';
+          const inner = badge.firstElementChild;
+          if (inner) {
+            inner.style.width = maxSize + 'px';
+            inner.style.height = maxSize + 'px';
+          }
+        }
+      });
+
+      // ── 4. Clean up the "5 assets · Scroll to view more" summary row ──
+      //    Smaller icon stack (20px, 8px overlap), hide chain badges,
+      //    add a subtle separator line above the row.
+      if (['2LH-0', '2TG-0'].includes(id)) {
+        const scrollMore = Array.from(screen.querySelectorAll('div')).find(d =>
+          d.children.length === 0 && d.textContent.trim() === 'Scroll to view more'
+        );
+        if (scrollMore) {
+          // Walk up to the row container (a flex with space-between)
+          let row = scrollMore.parentElement;
+          while (row && row !== screen) {
+            const s = row.getAttribute('style') || '';
+            if (s.includes('display:flex') && s.includes('justify-content:space-between')) break;
+            row = row.parentElement;
+          }
+          if (row && row !== screen) {
+            // Shrink icons inside this row from 22 → 20px, with -8px stagger
+            const icons = row.querySelectorAll('div[style*="width:22px"][style*="height:22px"][style*="position:relative"]');
+            icons.forEach((icon, i) => {
+              icon.style.width = '20px';
+              icon.style.height = '20px';
+              if (i > 0) icon.style.marginLeft = '-12px'; // 20-8 = 12 overlap
+              // Hide chain badge
+              Array.from(icon.children).forEach(c => {
+                const cs = c.getAttribute('style') || '';
+                if (cs.includes('position:absolute') && cs.includes('bottom:')) {
+                  c.style.display = 'none';
+                }
+              });
+              // Resize inner icon
+              const inner = icon.querySelector('div[style*="background-image"]');
+              if (inner) {
+                inner.style.width = '20px';
+                inner.style.height = '20px';
+              }
+            });
+            // Subtle separator above the row
+            if (!row.previousElementSibling || !row.previousElementSibling.classList.contains('nx-summary-sep')) {
+              const sep = document.createElement('div');
+              sep.className = 'nx-summary-sep';
+              sep.style.cssText = 'background-color:#ECECEA;height:1px;width:100%;margin-bottom:10px;align-self:stretch';
+              row.insertAdjacentElement('beforebegin', sep);
+            }
+          }
+        }
+      }
+
+      // ── 9, 10, 11, 12, 14, 15: Picker refinements ──
+      if (['YC-0', '1QQ-0', '1N1-0', '1US-0'].includes(id)) {
+        refinePickerRows(screen);
+      }
+    }
+
+    function refinePickerRows(screen) {
+      const rows = screen.querySelectorAll('.nx-row');
+      rows.forEach(row => {
+        // ── 9. Move radio dot to the right end of the row ──
+        const radio = Array.from(row.children).find(c => {
+          const s = c.getAttribute('style') || '';
+          return s.includes('width:18px') && s.includes('height:18px') &&
+                 s.includes('border-radius:999px') && s.includes('border-style:solid');
+        });
+        if (radio && row.lastElementChild !== radio) {
+          row.appendChild(radio);
+        }
+
+        // ── 12. Mark selected row (filled radio = thick blue border) ──
+        if (radio) {
+          const rs = radio.getAttribute('style') || '';
+          const isSelected = rs.includes('border-color:#006BF4') && /border-width:[3-9]px/.test(rs);
+          row.classList.toggle('nx-row-selected', isSelected);
+        }
+
+        // ── 15. Vertically center contents; right column justify-center ──
+        row.style.alignItems = 'center';
+        const rightCol = Array.from(row.children).find(c => {
+          const s = c.getAttribute('style') || '';
+          return s.includes('align-items:flex-end') && s.includes('flex-direction:column');
+        });
+        if (rightCol) rightCol.style.justifyContent = 'center';
+
+        // ── 11. Compact row — cap vertical padding at 12px (target ≤64px height) ──
+        row.style.paddingBlock = '12px';
+
+        // ── 10. Fix chain icon overlapping chain name (USDC Arbitrum etc.) ──
+        Array.from(row.querySelectorAll('div')).forEach(parent => {
+          const ps = parent.getAttribute('style') || '';
+          if (!ps.includes('position:relative') || !ps.includes('width:fit-content')) return;
+          const children = Array.from(parent.children);
+          if (children.length !== 2) return;
+          const text = children[0];
+          const icon = children[1];
+          const is = icon.getAttribute('style') || '';
+          if (!is.includes('position:absolute')) return;
+          // Restructure: icon first, then text, in a clean horizontal flex with gap 8
+          icon.style.position = 'static';
+          icon.style.left = '';
+          icon.style.top = '';
+          icon.style.translate = '';
+          parent.style.display = 'flex';
+          parent.style.alignItems = 'center';
+          parent.style.gap = '8px';
+          parent.style.width = 'auto';
+          parent.insertBefore(icon, text);
+          text.textContent = (text.textContent || '').trim();
+          text.style.width = 'auto';
+          text.style.whiteSpace = '';
+          text.style.whiteSpaceCollapse = '';
+        });
+
+        // ── 14. Cap chain icon stacks at 3 visible + "+N chains" overflow ──
+        const stacks = row.querySelectorAll('div[style*="position:relative"][style*="height:14px"]');
+        stacks.forEach(stack => {
+          const abs = Array.from(stack.children).filter(c =>
+            (c.getAttribute('style') || '').includes('position:absolute')
+          );
+          if (abs.length < 4) return;
+          abs.forEach((child, i) => {
+            child.style.display = i >= 3 ? 'none' : '';
+          });
+          stack.style.width = '30px'; // 3 icons * 8px stagger + 14px = 30px tight
+          const parent = stack.parentElement;
+          if (parent) {
+            const txt = Array.from(parent.querySelectorAll('div')).find(c =>
+              c.children.length === 0 && /\d+ chains?/.test((c.textContent || '').trim())
+            );
+            if (txt) {
+              const m = (txt.textContent || '').match(/(\d+) chains?/);
+              if (m) {
+                const total = parseInt(m[1], 10);
+                if (total > 3) txt.textContent = '+' + (total - 3) + ' chains';
+              }
+            }
+          }
+        });
+      });
+    }
   </script>
 
   <script type="text/babel" data-presets="react">
