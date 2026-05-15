@@ -455,13 +455,15 @@
       justify-content: center;
     }
 
-    /* Slide transitions (mode) */
+    /* Mode-screen transition: quiet opacity-only fade. No translate — the
+       horizontal slide felt jumpy when the widget changed height between
+       modes. */
     .slide-enter {
-      animation: slideIn 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation: modeFade 0.22s ease-out both;
     }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(28px); }
-      to   { opacity: 1; transform: translateX(0); }
+    @keyframes modeFade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
     /* Fade-in for modals/overlays */
     .fade-enter {
@@ -512,6 +514,36 @@
       color: #161615;
       font-weight: 500;
       font-variant-numeric: tabular-nums;
+    }
+    /* Asset-detail expansion rows: 4-column grid for clean alignment.
+       [ token | chain | amount-token | amount-usd ] */
+    .nx-expansion-asset {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      column-gap: 12px;
+      align-items: center;
+      font-size: 14px;
+      line-height: 24px;
+    }
+    .nx-expansion-asset > .nx-ea-sym {
+      color: #161615;
+      font-weight: 500;
+    }
+    .nx-expansion-asset > .nx-ea-chain {
+      color: #848483;
+      font-weight: 400;
+    }
+    .nx-expansion-asset > .nx-ea-amt {
+      color: #161615;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .nx-expansion-asset > .nx-ea-usd {
+      color: #848483;
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+      min-width: 64px;
+      text-align: right;
     }
     @keyframes expandIn {
       from { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
@@ -882,8 +914,8 @@ window._nxRunStepStagger = (screen) => {
           '<div class="nx-expansion-row">Gas sponsorship <span class="nx-val">$0.10</span></div>';
       } else if (kind === 'assets') {
         exp.innerHTML =
-          '<div class="nx-expansion-row" style="color:#161615;font-size:14px"><span>USDC <span style="color:#848483;margin-left:6px;font-weight:400">Arbitrum</span></span><span class="nx-val">250 USDC <span style="color:#848483;font-weight:400;margin-left:6px">$250.50</span></span></div>' +
-          '<div class="nx-expansion-row" style="color:#161615;font-size:14px"><span>ETH <span style="color:#848483;margin-left:6px;font-weight:400">Optimism</span></span><span class="nx-val">0.435 ETH <span style="color:#848483;font-weight:400;margin-left:6px">$150.50</span></span></div>';
+          '<div class="nx-expansion-asset"><span class="nx-ea-sym">USDC</span><span class="nx-ea-chain">Arbitrum</span><span class="nx-ea-amt">250 USDC</span><span class="nx-ea-usd">$250.50</span></div>' +
+          '<div class="nx-expansion-asset"><span class="nx-ea-sym">ETH</span><span class="nx-ea-chain">Optimism</span><span class="nx-ea-amt">0.435 ETH</span><span class="nx-ea-usd">$150.50</span></div>';
       } else if (kind === 'priceImpact') {
         exp.innerHTML =
           '<div class="nx-expansion-row">Swap impact <span class="nx-val" style="color:#1F8A4F">−0.04%</span></div>' +
@@ -913,6 +945,11 @@ window._nxRunStepStagger = (screen) => {
     //   step 3: + "Cross-chain proof failed" (red X, retrying)
     //   step 4: morph the failed row to "verified" (blue check)
     function applyInflightStep(screen, step) {
+      // No-op if the same step is being applied — avoids re-touching styles
+      // on every render and the resulting visible flicker.
+      if (screen.dataset.nxStepApplied === String(step)) return;
+      screen.dataset.nxStepApplied = String(step);
+
       const rows = Array.from(screen.querySelectorAll('.nx-step'));
       if (rows.length < 5) return;
       const setVisible = (el, on) => {
@@ -1464,10 +1501,26 @@ window._nxRunStepStagger = (screen) => {
     function Screen({ id, state, dispatch }) {
       const ref = useRef(null);
 
+      // Re-apply DOM mutations only when the inputs that drive them change —
+      // not after every dispatch. Re-running on every render caused visible
+      // flicker on the pending screen because applyInflightStep + design
+      // refinements would re-touch the same nodes 5×/sec.
       useEffect(() => {
         if (!ref.current) return;
         window._nxApplyScreenState(ref.current, id, state, dispatch);
-      });  // run after every state change
+      }, [
+        id,
+        state.mode,
+        state.overlay,
+        state.sendAssets,
+        state.receiveAsset,
+        state.amount,
+        state.recipient,
+        state.pickerFilter,
+        state.detailsExpanded,
+        state.pendingStep,
+        dispatch,
+      ]);
 
       const handleClick = useCallback((e) => {
         const node = e.target.closest('div, button, a, span');
