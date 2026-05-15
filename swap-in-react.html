@@ -1232,14 +1232,16 @@ window._nxRunStepStagger = (screen) => {
         if (!cw) return;
         const isSuccessCheck = style.includes('background-color:#006BF4') &&
                                !!badge.querySelector('svg path[stroke="#FFFFFE"]');
-        const ratio = isSuccessCheck ? 0.28 : 0.4;
+        // Paper exact: success-check badge is 26px on a 64px token icon
+        // (ratio ≈ 0.406). Other badges (chain markers) stay at 0.4.
+        const ratio = isSuccessCheck ? 0.406 : 0.4;
         const maxSize = Math.floor(pw * ratio);
         if (cw > maxSize) {
           badge.style.width = maxSize + 'px';
           badge.style.height = maxSize + 'px';
           if (isSuccessCheck) {
-            // Also reduce the white border around the badge proportionally
-            badge.style.borderWidth = '2px';
+            // Paper uses a 2.5px white ring around the success-check badge
+            badge.style.borderWidth = '2.5px';
           }
           const inner = badge.firstElementChild;
           if (inner) {
