@@ -1691,6 +1691,22 @@ window._nxRunStepStagger = (screen) => {
       ]);
 
       const handleClick = useCallback((e) => {
+        // Pending-card chevron toggle: detect a click on (or inside) the SVG
+        // whose <path> matches Paper's 14×14 chevron. Handle this before the
+        // text-based routing below, since the SVG itself has no text.
+        if (id === '20L-0' || id === '25P-0') {
+          const chevronSvg = e.target.closest && e.target.closest('svg');
+          if (chevronSvg) {
+            const p = chevronSvg.querySelector('path');
+            if (p && (p.getAttribute('d') || '').trim() === 'M3 5L7 9L11 5') {
+              e.preventDefault();
+              e.stopPropagation();
+              dispatch({ type: 'TOGGLE_PENDING_COLLAPSE' });
+              return;
+            }
+          }
+        }
+
         const node = e.target.closest('div, button, a, span');
         if (!node) return;
         const text = (node.textContent || '').trim();
