@@ -908,9 +908,12 @@ window._nxRunStepStagger = (screen) => {
 
       if (!expanded) return;
 
-      // Add the new expansion
+      // Add the new expansion. Inline `align-self: stretch` overrides the
+      // host card's `align-items: center` so the expansion fills row width.
       const exp = document.createElement('div');
       exp.className = 'nx-expansion';
+      exp.style.alignSelf = 'stretch';
+      exp.style.width = '100%';
       if (kind === 'fees') {
         exp.innerHTML =
           '<div class="nx-expansion-row"><span>Execution Gas fee</span><span class="nx-val">$0.05</span></div>' +
