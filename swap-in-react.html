@@ -1054,6 +1054,46 @@ window._nxRunStepStagger = (screen) => {
       screen.dataset.nxPendingToggleWired = '1';
     }
 
+    // 25P-0 collapsed view morph: replace the spinning verifying status with a
+    // checked verified status before transitioning to success.
+    function applyCollapsedFinalState(screen) {
+      if (screen.dataset.nxCollapsedMorphed === '1') return;
+      // Find the 22×22 spinner SVG (path d="M11 3C15.418 3 19 6.582 19 11")
+      const svgs = Array.from(screen.querySelectorAll('svg'));
+      const spinnerSvg = svgs.find(svg => {
+        const paths = Array.from(svg.querySelectorAll('path'));
+        return paths.some(p => /M11 3C15\.418 3 19 6\.582/.test(p.getAttribute('d') || ''));
+      });
+      if (!spinnerSvg) return;
+      const wrapper = spinnerSvg.parentElement;
+      if (!wrapper) return;
+      // Replace the wrapper's contents with a filled blue circle + white check
+      wrapper.style.backgroundColor = '#3D7BFF';
+      wrapper.style.borderRadius = '999px';
+      wrapper.style.transition = 'background-color 0.3s ease';
+      wrapper.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">' +
+        '<path d="M2.5 6L5 8.5L9.5 4" stroke="#FFFFFE" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />' +
+      '</svg>';
+
+      // Update the title + subtitle text
+      const titleEl = Array.from(screen.querySelectorAll('div')).find(d =>
+        d.children.length === 0 && /Verifying intent/.test(d.textContent || '')
+      );
+      if (titleEl) {
+        titleEl.style.transition = 'color 0.3s ease';
+        titleEl.textContent = 'Intent verified';
+      }
+      const subEl = Array.from(screen.querySelectorAll('div')).find(d =>
+        d.children.length === 0 && /Confirming on/.test(d.textContent || '')
+      );
+      if (subEl) {
+        subEl.style.transition = 'color 0.3s ease';
+        subEl.style.color = '#848483';
+        subEl.textContent = 'Confirmed on Arbitrum';
+      }
+      screen.dataset.nxCollapsedMorphed = '1';
+    }
+
     function applyInflightStep(screen, step) {
       // No-op if the same step is being applied — avoids re-touching styles
       // on every render and the resulting visible flicker.
@@ -1260,6 +1300,11 @@ window._nxRunStepStagger = (screen) => {
       const isPending = id === '20L-0';
       if (isPending && state.pendingStep != null) {
         applyInflightStep(screen, state.pendingStep);
+      }
+
+      // ── 25P-0 collapsed status: morph "Verifying intent" → "Verified" at step 4
+      if (id === '25P-0' && state.pendingStep >= 4) {
+        applyCollapsedFinalState(screen);
       }
 
       // ── Pending chevron toggle (both 20L-0 expanded and 25P-0 collapsed) ──
@@ -1883,15 +1928,17 @@ window._nxRunStepStagger = (screen) => {
       useEffect(() => {
         if (state.mode !== 'pending') return;
         if (!state.pendingCollapsed) {
+          // Expanded view: park at step=3 once (don't cycle).
           dispatch({ type: 'SET_PENDING_STEP', step: 3 });
           return;
         }
-        const t1 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 1 }), 1000);
-        const t2 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 2 }), 2000);
-        const t3 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 3 }), 3000);
-        const t4 = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 4 }), 3500);
-        const t5 = setTimeout(() => dispatch({ type: 'GO_SUCCESS' }), 4000);
-        return () => [t1, t2, t3, t4, t5].forEach(clearTimeout);
+        // Collapsed view: hold "Verifying intent" for 3s, flip to verified at
+        // step=4 (DOM-level morph in applyCollapsedFinalState), then advance
+        // to success at 4s. Only two dispatches — no per-second cycling, so
+        // the row doesn't visibly reappear/repaint.
+        const tMorph = setTimeout(() => dispatch({ type: 'SET_PENDING_STEP', step: 4 }), 3000);
+        const tDone  = setTimeout(() => dispatch({ type: 'GO_SUCCESS' }), 4000);
+        return () => { clearTimeout(tMorph); clearTimeout(tDone); };
       }, [state.mode, state.pendingCollapsed]);
 
       const modeId = state.mode === 'pending'
