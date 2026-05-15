@@ -1245,8 +1245,18 @@ window._nxRunStepStagger = (screen) => {
           }
           const inner = badge.firstElementChild;
           if (inner) {
-            inner.style.width = maxSize + 'px';
-            inner.style.height = maxSize + 'px';
+            if (isSuccessCheck && inner.tagName.toLowerCase() === 'svg') {
+              // Paper: SVG inside the success check is 12px on a 26px badge
+              // ≈ 0.46 — leaves a comfortable inner padding around the tick.
+              const svgSize = Math.floor(maxSize * 0.46);
+              inner.style.width = svgSize + 'px';
+              inner.style.height = svgSize + 'px';
+              inner.setAttribute('width', svgSize);
+              inner.setAttribute('height', svgSize);
+            } else {
+              inner.style.width = maxSize + 'px';
+              inner.style.height = maxSize + 'px';
+            }
           }
         }
       });
