@@ -655,6 +655,19 @@
             node = node.parentElement;
           }
         });
+
+        // ── Let the pill's right-section shrink to content ──
+        // The "right section" of each asset row (pill + X) has an inline
+        // width:142px reserving space for both. When X is display:none, that
+        // leaves empty space to the right of the pill. Clear the explicit width
+        // so the section sizes to its visible content and the pill ends up flush
+        // against the row's right edge.
+        screen.querySelectorAll('.nx-xdel').forEach(xdel => {
+          const parent = xdel.parentElement;
+          if (parent && /width:\d+px/.test(parent.getAttribute('style') || '')) {
+            parent.style.width = 'auto';
+          }
+        });
 }
 
     window._nxRunCountUps = (screen) => {
