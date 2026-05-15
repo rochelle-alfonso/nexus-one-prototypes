@@ -496,20 +496,23 @@
       align-self: stretch;
       width: 100%;
       box-sizing: border-box;
-      background-color: #F8F8F7;
-      padding: 14px 16px;
+      background-color: #F9F9F8;
+      padding: 14px 0;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 12px;
       font-family: 'Geist', system-ui, sans-serif;
       overflow: hidden;
       animation: expandIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
     }
+    /* Fee / price-impact rows: simple label ↔ value */
     .nx-expansion-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       width: 100%;
+      box-sizing: border-box;
+      padding: 0 16px;
       font-size: 14px;
       line-height: 24px;
       color: #848483;
@@ -519,36 +522,82 @@
       font-weight: 500;
       font-variant-numeric: tabular-nums;
     }
-    /* Asset-detail expansion rows: 4-column grid for clean alignment.
-       [ token | chain | amount-token | amount-usd ] */
+    /* Asset-detail row: matches Paper 1I6-0 exactly.
+       [ 26px token icon w/ 12px chain badge | sym+chain stacked | amt+usd stacked ] */
     .nx-expansion-asset {
-      display: grid;
-      grid-template-columns: 1fr 1fr auto auto;
-      column-gap: 16px;
+      display: flex;
       align-items: center;
+      gap: 10px;
       width: 100%;
+      box-sizing: border-box;
+      padding: 0 16px;
+    }
+    .nx-ea-icon {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      position: relative;
+    }
+    .nx-ea-icon-main {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background-position: 50%;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+    }
+    .nx-ea-icon-chain {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      outline: 1px solid #F9F9F8;
+      background-position: 50%;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+    }
+    .nx-ea-text {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      gap: 1px;
+      min-width: 0;
+    }
+    .nx-ea-text > .nx-ea-sym {
+      color: #161615;
+      font-family: 'Geist-Regular', 'Geist', system-ui, sans-serif;
       font-size: 14px;
       line-height: 24px;
     }
-    .nx-expansion-asset > .nx-ea-sym {
-      color: #161615;
-      font-weight: 500;
-    }
-    .nx-expansion-asset > .nx-ea-chain {
+    .nx-ea-text > .nx-ea-chain {
       color: #848483;
-      font-weight: 400;
+      font-family: 'Geist-Regular', 'Geist', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 20px;
     }
-    .nx-expansion-asset > .nx-ea-amt {
+    .nx-ea-vals {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      flex-shrink: 0;
+      gap: 1px;
+    }
+    .nx-ea-vals > .nx-ea-amt {
       color: #161615;
+      font-family: 'Geist-Medium', 'Geist', system-ui, sans-serif;
+      font-size: 14px;
       font-weight: 500;
+      line-height: 24px;
       font-variant-numeric: tabular-nums;
     }
-    .nx-expansion-asset > .nx-ea-usd {
+    .nx-ea-vals > .nx-ea-usd {
       color: #848483;
-      font-weight: 400;
+      font-family: 'Geist-Regular', 'Geist', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 20px;
       font-variant-numeric: tabular-nums;
-      min-width: 64px;
-      text-align: right;
     }
     @keyframes expandIn {
       from { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
@@ -921,9 +970,28 @@ window._nxRunStepStagger = (screen) => {
           '<div class="nx-expansion-row"><span>Solver fee</span><span class="nx-val">$0.001</span></div>' +
           '<div class="nx-expansion-row"><span>Gas sponsorship</span><span class="nx-val">$0.10</span></div>';
       } else if (kind === 'assets') {
+        const USDC = 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/5GE6HE7Z4D1RFNGPAA1C2BB5M7.png';
+        const ETH  = 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/4ER6Y7ECPNM1DSDTE47ZD9TJ33.png';
+        const ARB  = 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/6QJRRY0GSJXQP5YQHSX35QNXFM.png';
+        const OP   = 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/5QY8PJHAYP07Y6Z2M581HMX6DM.png';
+        const assetRow = (tok, chainName, chainImg, tokImg, amt, usd) =>
+          '<div class="nx-expansion-asset">' +
+            '<div class="nx-ea-icon">' +
+              `<div class="nx-ea-icon-main" style="background-image:url(${tokImg})"></div>` +
+              `<div class="nx-ea-icon-chain" style="background-image:url(${chainImg})"></div>` +
+            '</div>' +
+            '<div class="nx-ea-text">' +
+              `<span class="nx-ea-sym">${tok}</span>` +
+              `<span class="nx-ea-chain">${chainName}</span>` +
+            '</div>' +
+            '<div class="nx-ea-vals">' +
+              `<span class="nx-ea-amt">${amt}</span>` +
+              `<span class="nx-ea-usd">${usd}</span>` +
+            '</div>' +
+          '</div>';
         exp.innerHTML =
-          '<div class="nx-expansion-asset"><span class="nx-ea-sym">USDC</span><span class="nx-ea-chain">Arbitrum</span><span class="nx-ea-amt">250 USDC</span><span class="nx-ea-usd">$250.50</span></div>' +
-          '<div class="nx-expansion-asset"><span class="nx-ea-sym">ETH</span><span class="nx-ea-chain">Optimism</span><span class="nx-ea-amt">0.435 ETH</span><span class="nx-ea-usd">$150.50</span></div>';
+          assetRow('USDC', 'Arbitrum', ARB, USDC, '250 USDC', '$250.50') +
+          assetRow('ETH',  'Optimism', OP,  ETH,  '0.435 ETH', '$150.50');
       } else if (kind === 'priceImpact') {
         exp.innerHTML =
           '<div class="nx-expansion-row"><span>Swap impact</span><span class="nx-val" style="color:#1F8A4F">−0.04%</span></div>' +
