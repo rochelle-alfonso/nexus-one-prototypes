@@ -25,8 +25,7 @@
       50%, 100% { opacity: 0; }
     }
 
-    /* Quiet screen entry fade — kept as a single subtle micro-interaction */
-    .screen.active { animation: nx-fadeIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    /* Screen visibility — no animation here; mode/overlay wrappers handle the fade */
 
     /* ─── Batch 1: Root, empty (3H-0, 4X-0, 7G-0) ─── */
     /* 32×32 top-bar icon buttons (history clock, X close): subtle scale + bg shift on hover */
@@ -1199,89 +1198,102 @@ window._nxRunStepStagger = (screen) => {
       }
     }
 
+    // Completely rebuild each picker row's innerHTML into a clean horizontal layout.
+    // Target structure (64px tall, single row):
+    //   [32px icon] | [name bold + chain small grey stacked] | …spacer… | [balance bold + USD small grey stacked] | [24px radio]
     function refinePickerRows(screen) {
       const rows = screen.querySelectorAll('.nx-row');
       rows.forEach(row => {
-        // ── 9. Move radio dot to the right end of the row ──
-        const radio = Array.from(row.children).find(c => {
-          const s = c.getAttribute('style') || '';
-          return s.includes('width:18px') && s.includes('height:18px') &&
-                 s.includes('border-radius:999px') && s.includes('border-style:solid');
-        });
-        if (radio && row.lastElementChild !== radio) {
-          row.appendChild(radio);
-        }
-
-        // ── 12. Mark selected row (filled radio = thick blue border) ──
-        if (radio) {
-          const rs = radio.getAttribute('style') || '';
-          const isSelected = rs.includes('border-color:#006BF4') && /border-width:[3-9]px/.test(rs);
-          row.classList.toggle('nx-row-selected', isSelected);
-        }
-
-        // ── 15. Vertically center contents; right column justify-center ──
-        row.style.alignItems = 'center';
-        const rightCol = Array.from(row.children).find(c => {
-          const s = c.getAttribute('style') || '';
-          return s.includes('align-items:flex-end') && s.includes('flex-direction:column');
-        });
-        if (rightCol) rightCol.style.justifyContent = 'center';
-
-        // ── 11. Compact row — cap vertical padding at 12px (target ≤64px height) ──
-        row.style.paddingBlock = '12px';
-
-        // ── 10. Fix chain icon overlapping chain name (USDC Arbitrum etc.) ──
-        Array.from(row.querySelectorAll('div')).forEach(parent => {
-          const ps = parent.getAttribute('style') || '';
-          if (!ps.includes('position:relative') || !ps.includes('width:fit-content')) return;
-          const children = Array.from(parent.children);
-          if (children.length !== 2) return;
-          const text = children[0];
-          const icon = children[1];
-          const is = icon.getAttribute('style') || '';
-          if (!is.includes('position:absolute')) return;
-          // Restructure: icon first, then text, in a clean horizontal flex with gap 8
-          icon.style.position = 'static';
-          icon.style.left = '';
-          icon.style.top = '';
-          icon.style.translate = '';
-          parent.style.display = 'flex';
-          parent.style.alignItems = 'center';
-          parent.style.gap = '8px';
-          parent.style.width = 'auto';
-          parent.insertBefore(icon, text);
-          text.textContent = (text.textContent || '').trim();
-          text.style.width = 'auto';
-          text.style.whiteSpace = '';
-          text.style.whiteSpaceCollapse = '';
-        });
-
-        // ── 14. Cap chain icon stacks at 3 visible + "+N chains" overflow ──
-        const stacks = row.querySelectorAll('div[style*="position:relative"][style*="height:14px"]');
-        stacks.forEach(stack => {
-          const abs = Array.from(stack.children).filter(c =>
-            (c.getAttribute('style') || '').includes('position:absolute')
-          );
-          if (abs.length < 4) return;
-          abs.forEach((child, i) => {
-            child.style.display = i >= 3 ? 'none' : '';
-          });
-          stack.style.width = '30px'; // 3 icons * 8px stagger + 14px = 30px tight
-          const parent = stack.parentElement;
-          if (parent) {
-            const txt = Array.from(parent.querySelectorAll('div')).find(c =>
-              c.children.length === 0 && /\d+ chains?/.test((c.textContent || '').trim())
-            );
-            if (txt) {
-              const m = (txt.textContent || '').match(/(\d+) chains?/);
-              if (m) {
-                const total = parseInt(m[1], 10);
-                if (total > 3) txt.textContent = '+' + (total - 3) + ' chains';
-              }
-            }
-          }
-        });
+        if (row.dataset.nxRebuilt === '1') return; // idempotent
+        const data = extractPickerRowData(row);
+        if (!data) return;
+        row.innerHTML = renderPickerRow(data);
+        row.style.cssText =
+          'padding:0;align-self:stretch;display:block;box-sizing:border-box;' +
+          (data.selected
+            ? 'background-color:#F4F8FF;box-shadow:inset 3px 0 0 0 #006BF4;'
+            : 'background-color:#FFFFFE;');
+        row.dataset.nxRebuilt = '1';
+        if (data.selected) row.classList.add('nx-row-selected');
       });
+    }
+
+    // Extract the data from the existing row's DOM so we can rebuild it cleanly.
+    function extractPickerRowData(row) {
+      // Token icon: the first div with a background-image whose width is large
+      // enough to be a token icon (≥24px) — this skips the tiny chain badges.
+      const tokenImgEl = Array.from(row.querySelectorAll('div')).find(d => {
+        const s = d.getAttribute('style') || '';
+        if (!s.includes('background-image:url')) return false;
+        const w = (s.match(/width:(\d+)px/) || [])[1];
+        return w != null && parseInt(w, 10) >= 24;
+      });
+      const iconUrl = tokenImgEl
+        ? (((tokenImgEl.getAttribute('style') || '').match(/background-image:url\(([^)]+)\)/) || [])[1] || null)
+        : null;
+
+      // Walk leaf text nodes and classify them.
+      const leaves = Array.from(row.querySelectorAll('div')).filter(d => d.children.length === 0);
+      let tokenSymbol = '';
+      let chainText = '';
+      let balance = '';
+      let usd = '';
+      let hasUnified = false;
+
+      for (const el of leaves) {
+        const t = (el.textContent || '').trim();
+        if (!t) continue;
+        if (!tokenSymbol && /^[A-Z]{2,5}$/.test(t)) { tokenSymbol = t; continue; }
+        if (!hasUnified && t === 'UNIFIED') { hasUnified = true; continue; }
+        if (!balance && /^[\d,]+(\.\d+)? [A-Z]{2,6}$/.test(t)) { balance = t; continue; }
+        if (!usd && /^≈ \$/.test(t)) { usd = t; continue; }
+        if (!usd && /^\$[\d,]+(\.\d+)?$/.test(t)) { usd = '≈ ' + t; continue; }
+        if (!chainText && /(^\d+ chains?$)|(^\+\d+ chains?$)|(^on [A-Z][a-z]+$)/.test(t)) { chainText = t.replace(/^on /, ''); continue; }
+        if (!chainText && /^[A-Z][a-z]+$/.test(t)) { chainText = t; continue; }
+      }
+
+      // Selected: the radio dot has a thick blue border (the "filled" indicator).
+      const radio = Array.from(row.querySelectorAll('div')).find(d => {
+        const s = d.getAttribute('style') || '';
+        return s.includes('width:18px') && s.includes('height:18px') &&
+               s.includes('border-radius:999px') && s.includes('border-style:solid');
+      });
+      const radioStyle = radio ? (radio.getAttribute('style') || '') : '';
+      const selected = radioStyle.includes('border-color:#006BF4') && /border-width:[3-9]px/.test(radioStyle);
+
+      if (!tokenSymbol && !iconUrl) return null;
+      return { tokenSymbol, chainText, balance, usd, iconUrl, hasUnified, selected };
+    }
+
+    // Render the row HTML from extracted data.
+    function renderPickerRow(d) {
+      const esc = (s) => (s || '').replace(/</g, '&lt;');
+      const unifiedBadge = d.hasUnified
+        ? '<span style="background:#E3EEFF;color:#006BF4;font-family:\'Geist-SemiBold\',\'Geist\',system-ui;font-size:11px;font-weight:600;letter-spacing:0.06em;line-height:14px;padding:2px 8px;border-radius:100px;text-transform:uppercase">Unified</span>'
+        : '';
+      const iconBg = d.iconUrl
+        ? `background-image:url(${d.iconUrl});background-position:50%;background-repeat:no-repeat;background-size:100% 100%;`
+        : 'background:#F0F0EF;';
+      const radioRing = d.selected
+        ? 'background:#FFFFFE;border:7px solid #006BF4;'
+        : 'background:#FFFFFE;border:1.5px solid #E8E8E7;';
+      return [
+        '<div style="display:flex;align-items:center;gap:12px;width:100%;height:64px;padding:0 16px;box-sizing:border-box">',
+          `<div style="flex-shrink:0;width:32px;height:32px;border-radius:999px;${iconBg}"></div>`,
+          '<div style="display:flex;flex-direction:column;flex:1;gap:2px;min-width:0">',
+            '<div style="display:flex;align-items:center;gap:6px">',
+              `<span style="color:#161615;font-family:\'Geist-Medium\',\'Geist\',system-ui;font-size:16px;font-weight:500;line-height:20px">${esc(d.tokenSymbol)}</span>`,
+              unifiedBadge,
+            '</div>',
+            `<div style="color:#848483;font-family:\'Geist-Regular\',\'Geist\',system-ui;font-size:13px;line-height:18px">${esc(d.chainText)}</div>`,
+          '</div>',
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">',
+            `<div style="color:#161615;font-family:\'Geist-Medium\',\'Geist\',system-ui;font-size:15px;font-weight:500;line-height:20px;font-variant-numeric:tabular-nums">${esc(d.balance)}</div>`,
+            `<div style="color:#848483;font-family:\'Geist-Regular\',\'Geist\',system-ui;font-size:13px;line-height:18px;font-variant-numeric:tabular-nums">${esc(d.usd)}</div>`,
+          '</div>',
+          `<div style="flex-shrink:0;width:24px;height:24px;border-radius:999px;${radioRing}box-sizing:border-box"></div>`,
+        '</div>'
+      ].join('');
     }
   </script>
 
