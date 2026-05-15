@@ -178,13 +178,19 @@
     }
     .nx-xdel {
       cursor: pointer;
-      transition: background-color 0.15s ease, transform 0.15s cubic-bezier(0.22, 1, 0.36, 1) !important;
+      opacity: 0;
+      pointer-events: none;
+      transition: background-color 0.15s ease, transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease !important;
     }
-    .nx-xdel:hover {
+    .nx-xdel.nx-xdel-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .nx-xdel.nx-xdel-visible:hover {
       background-color: #FFD9D9 !important;
       transform: scale(1.15) !important;
     }
-    .nx-xdel:active {
+    .nx-xdel.nx-xdel-visible:active {
       transform: scale(0.88) !important;
     }
     .nx-max {
@@ -635,6 +641,18 @@
         screen.querySelectorAll('[style*="background-color:#FFFFFE"][style*="border-radius:14px"][style*="height:48px"]').forEach(el => el.classList.add('nx-search'));
         // Recently Used token chips: bg #F4F4F3 + border-radius 999
         screen.querySelectorAll('[style*="background-color:#F4F4F3"][style*="border-radius:999px"]').forEach(el => el.classList.add('nx-chip'));
+
+        // ── Only show the X-delete on the active (being-typed-in) asset row ──
+        // For each blinking cursor, walk up its ancestors until we hit one that
+        // also contains an nx-xdel. That ancestor is the row; reveal its X.
+        screen.querySelectorAll('.nx-cursor').forEach(cursor => {
+          let node = cursor.parentElement;
+          while (node && node !== screen) {
+            const xdel = node.querySelector('.nx-xdel');
+            if (xdel) { xdel.classList.add('nx-xdel-visible'); break; }
+            node = node.parentElement;
+          }
+        });
       });
 
       // ─── Count-up runner: animates `.nx-countup` elements every time their screen activates ───
