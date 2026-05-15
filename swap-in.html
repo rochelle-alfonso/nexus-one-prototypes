@@ -9,37 +9,8 @@
   <style>
     @font-face{font-family:"Geist-Regular";src:local("Geist Regular"),local("Geist")}@font-face{font-family:"Geist-Medium";src:local("Geist Medium"),local("Geist");font-weight:500}@font-face{font-family:"Geist-SemiBold";src:local("Geist SemiBold"),local("Geist");font-weight:600}@font-face{font-family:"Delight";src:local("Fraunces")}@font-face{font-family:"Delight-Regular";src:local("Fraunces")}@font-face{font-family:"Delight-Medium";src:local("Fraunces")}*{box-sizing:border-box}
     body { margin: 0; padding: 80px 20px 60px; background: #1A1A1A; font-family: 'Geist', system-ui, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-    /* All screens occupy the same centered position; only the active one is visible.
-       This lets CSS animations run reliably on entry (display:none → display:flex was
-       too fragile — browsers sometimes skipped the keyframe entirely). */
-    .screen {
-      display: flex;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-      border-radius: 16px;
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      transform-origin: center center;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      z-index: 1;
-    }
-    .screen.active {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-      z-index: 2;
-    }
-    /* Modal-style transitions: the screen underneath the incoming/outgoing modal
-       stays visible. .nx-behind gives it a subtle backgrounded treatment so the
-       new modal reads as foregrounded. */
-    .screen.nx-behind {
-      filter: brightness(0.94);
-      transform: translate(-50%, -50%) scale(0.985);
-      transition: filter 0.3s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-    }
+    .screen { display: none; box-shadow: 0 20px 60px rgba(0,0,0,0.4); border-radius: 16px; }
+    .screen.active { display: flex; }
     .screen [data-route-to] { cursor: pointer; transition: filter 0.12s ease, transform 0.12s ease; }
     .screen [data-route-to]:hover { filter: brightness(0.97); }
     .screen [data-route-to]:active { transform: translateY(1px); }
@@ -54,42 +25,8 @@
       50%, 100% { opacity: 0; }
     }
 
-    /* ─── Screen-to-screen transitions ─── */
-    /* Each keyframe composes translate(-50%,-50%) (the centering transform) with
-       the directional offset so animations don't clobber positioning. */
-    @keyframes nx-trSlideUp {
-      from { opacity: 0; transform: translate(-50%, -50%) translateY(140px) scale(0.95); }
-      to { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
-    }
-    @keyframes nx-trSlideDown {
-      from { opacity: 0; transform: translate(-50%, -50%) translateY(-80px) scale(0.97); }
-      to { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
-    }
-    @keyframes nx-trPopIn {
-      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.78); }
-      60% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
-      100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    }
-    @keyframes nx-trSlideFromRight {
-      from { opacity: 0; transform: translate(-50%, -50%) translateX(100px); }
-      to { opacity: 1; transform: translate(-50%, -50%) translateX(0); }
-    }
-    @keyframes nx-trSlideToRight {
-      from { opacity: 0; transform: translate(-50%, -50%) translateX(-100px); }
-      to { opacity: 1; transform: translate(-50%, -50%) translateX(0); }
-    }
-    @keyframes nx-trFadeInCentered {
-      from { opacity: 0; transform: translate(-50%, -50%) translateY(8px) scale(0.99); }
-      to { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
-    }
-    .screen.active.nx-tr-fade { animation: nx-trFadeInCentered 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
-    .screen.active.nx-tr-slideUp { animation: nx-trSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
-    .screen.active.nx-tr-slideDown { animation: nx-trSlideDown 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
-    .screen.active.nx-tr-popIn { animation: nx-trPopIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-    .screen.active.nx-tr-slideFromRight { animation: nx-trSlideFromRight 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
-    .screen.active.nx-tr-slideToRight { animation: nx-trSlideToRight 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
-    /* Fallback: any active screen without a transition class still fades in centered */
-    .screen.active:not([class*="nx-tr-"]) { animation: nx-trFadeInCentered 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    /* Quiet screen entry fade — kept as a single subtle micro-interaction */
+    .screen.active { animation: nx-fadeIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
     /* ─── Batch 1: Root, empty (3H-0, 4X-0, 7G-0) ─── */
     /* 32×32 top-bar icon buttons (history clock, X close): subtle scale + bg shift on hover */
@@ -526,136 +463,17 @@
         if (el && !tagged.has(el)) { el.setAttribute('data-route-to', r.to); tagged.add(el); }
       }
     }
-    // ─── Screen type classification for transition selection ───
-    const screenType = {
-      "3H-0":"root","4X-0":"root","7G-0":"root",
-      "30R-0":"root","1-0":"root","GK-0":"root",
-      "2PX-0":"root","2TG-0":"root","2LH-0":"root",
-      "YC-0":"picker","1QQ-0":"picker","1N1-0":"picker",
-      "1US-0":"picker","1KX-0":"picker",
-      "1DB-0":"confirm","1FN-0":"confirm","1I6-0":"confirm",
-      "25P-0":"flight","20L-0":"flight",
-      "11W-0":"success","13M-0":"success",
-      "184-0":"history"
-    };
-    function pickTransition(fromId, toId) {
-      if (fromId === toId) return 'fade';
-      const fromT = screenType[fromId] || 'root';
-      const toT = screenType[toId] || 'root';
-      // Forward into a modal-like surface
-      if (toT === 'picker') return 'slideUp';
-      if (toT === 'confirm') return 'slideUp';
-      // Confirm → in-flight: fade (continuous flow)
-      if (toT === 'flight' && fromT === 'confirm') return 'fade';
-      // Flight or confirm → success: celebratory pop
-      if (toT === 'success') return 'popIn';
-      // Drill into history
-      if (toT === 'history') return 'slideFromRight';
-      // Back navigation: picker/confirm → root → slide down (dismiss modal)
-      if (fromT === 'picker' && toT === 'root') return 'slideDown';
-      if (fromT === 'confirm' && toT === 'root') return 'slideDown';
-      // Picker ↔ chain sub-picker
-      if (fromT === 'picker' && toT === 'picker') return 'slideFromRight';
-      // History → root (pop back)
-      if (fromT === 'history' && toT === 'root') return 'slideToRight';
-      // Same-type or unknown
-      return 'fade';
-    }
-    const TRANSITION_NAMES = ['fade','slideUp','slideDown','popIn','slideFromRight','slideToRight'];
-
-    // ─── Figma-style modal transitions: previous screen stays underneath ───
-    const CENTER = 'translate(-50%, -50%)';
-    // ENTER specs: animate the NEW (incoming) screen IN over the old.
-    const ENTER = {
-      fade:           { keyframes: [{ opacity: 0, transform: `${CENTER} scale(0.98)` }, { opacity: 1, transform: `${CENTER} scale(1)` }], duration: 280, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-      slideUp:        { keyframes: [{ opacity: 1, transform: `${CENTER} translateY(120vh)` }, { opacity: 1, transform: `${CENTER} translateY(0)` }], duration: 520, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-      popIn:          { keyframes: [{ opacity: 0, transform: `${CENTER} scale(0.7)` }, { opacity: 1, transform: `${CENTER} scale(1.06)`, offset: 0.6 }, { opacity: 1, transform: `${CENTER} scale(1)` }], duration: 620, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
-      slideFromRight: { keyframes: [{ opacity: 1, transform: `${CENTER} translateX(100vw)` }, { opacity: 1, transform: `${CENTER} translateX(0)` }], duration: 460, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
-    };
-    // EXIT specs: animate the OLD (outgoing) screen OUT while the new one sits underneath.
-    const EXIT = {
-      slideDown:    { keyframes: [{ opacity: 1, transform: `${CENTER} translateY(0)` }, { opacity: 1, transform: `${CENTER} translateY(120vh)` }], duration: 460, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' },
-      slideToRight: { keyframes: [{ opacity: 1, transform: `${CENTER} translateX(0)` }, { opacity: 1, transform: `${CENTER} translateX(100vw)` }], duration: 420, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' }
-    };
-    // For dismiss transitions, the underneath screen gets a subtle entrance fade
-    const UNDERLAY_FADE = { keyframes: [{ opacity: 0.85, transform: `${CENTER} scale(0.985)` }, { opacity: 1, transform: `${CENTER} scale(1)` }], duration: 320, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' };
-
-    const DISMISS_TRANSITIONS = new Set(['slideDown', 'slideToRight']);
-
     let idx = 0;
-    let _animsInFlight = [];
-    function cancelAllAnims() {
-      _animsInFlight.forEach(a => { try { a.cancel(); } catch (e) {} });
-      _animsInFlight = [];
-    }
     function showScreen(i) {
-      const prevId = order[idx];
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       const id = order[i];
-      const transition = pickTransition(prevId, id);
-      const transitionName = transition;
-      const isDismiss = DISMISS_TRANSITIONS.has(transition);
-      const isSameType = prevId === id;
-
-      cancelAllAnims();
-
-      const prevEl = prevId !== id ? document.querySelector('[data-screen="' + prevId + '"]') : null;
-      const newEl = document.querySelector('[data-screen="' + id + '"]');
-      if (!newEl) return;
-
-      // Reset any leftover inline state from prior transitions
-      document.querySelectorAll('.screen').forEach(s => {
-        s.classList.remove('active', 'nx-behind', 'nx-leaving');
-        s.style.zIndex = '';
-      });
-
-      // Activate the new screen so it's visible
-      newEl.classList.add('active');
-      tagRoutes(newEl);
-      if (window._nxRunCountUps) window._nxRunCountUps(newEl);
-      if (window._nxRunStepStagger) window._nxRunStepStagger(newEl);
-
-      console.log('[nx-transition]', prevId, '→', id, '=', transitionName, isDismiss ? '(dismiss)' : '(enter)');
-
-      if (isDismiss && prevEl && typeof prevEl.animate === 'function') {
-        // ── Dismiss: new screen sits underneath; old slides away on top ──
-        newEl.style.zIndex = '1';
-        prevEl.classList.add('active', 'nx-leaving');
-        prevEl.style.zIndex = '2';
-
-        // Subtle fade-in for the underneath screen so it doesn't feel static
-        const underAnim = newEl.animate(UNDERLAY_FADE.keyframes, { duration: UNDERLAY_FADE.duration, easing: UNDERLAY_FADE.easing, fill: 'both' });
-        _animsInFlight.push(underAnim);
-
-        const exitSpec = EXIT[transition];
-        const exitAnim = prevEl.animate(exitSpec.keyframes, { duration: exitSpec.duration, easing: exitSpec.easing, fill: 'forwards' });
-        _animsInFlight.push(exitAnim);
-        exitAnim.onfinish = () => {
-          prevEl.classList.remove('active', 'nx-leaving');
-          prevEl.style.zIndex = '';
-          newEl.style.zIndex = '';
-        };
-      } else if (!isSameType && prevEl && ENTER[transition] && typeof newEl.animate === 'function') {
-        // ── Enter (modal-open): old stays underneath, new slides in on top ──
-        prevEl.classList.add('active', 'nx-behind');
-        prevEl.style.zIndex = '1';
-        newEl.style.zIndex = '2';
-
-        const enterSpec = ENTER[transition];
-        const enterAnim = newEl.animate(enterSpec.keyframes, { duration: enterSpec.duration, easing: enterSpec.easing, fill: 'both' });
-        _animsInFlight.push(enterAnim);
-        enterAnim.onfinish = () => {
-          prevEl.classList.remove('active', 'nx-behind');
-          prevEl.style.zIndex = '';
-          newEl.style.zIndex = '';
-        };
-      } else {
-        // ── Fallback: standalone fade-in on the new screen ──
-        if (typeof newEl.animate === 'function') {
-          const a = newEl.animate(ENTER.fade.keyframes, { duration: ENTER.fade.duration, easing: ENTER.fade.easing, fill: 'both' });
-          _animsInFlight.push(a);
-        }
+      const el = document.querySelector('[data-screen="' + id + '"]');
+      if (el) {
+        el.classList.add('active');
+        tagRoutes(el);
+        if (window._nxRunCountUps) window._nxRunCountUps(el);
+        if (window._nxRunStepStagger) window._nxRunStepStagger(el);
       }
-
       document.getElementById('step-text').textContent = 'Step ' + (i+1) + ' of ' + order.length + ' — ' + (labels[id] || id);
       document.getElementById('screen-select').value = id;
       idx = i;
