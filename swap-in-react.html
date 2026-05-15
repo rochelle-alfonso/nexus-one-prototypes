@@ -493,6 +493,9 @@
 
     /* Inline fee/asset expansion */
     .nx-expansion {
+      align-self: stretch;
+      width: 100%;
+      box-sizing: border-box;
       background-color: #F8F8F7;
       padding: 14px 16px;
       display: flex;
@@ -506,6 +509,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      width: 100%;
       font-size: 14px;
       line-height: 24px;
       color: #848483;
@@ -519,9 +523,10 @@
        [ token | chain | amount-token | amount-usd ] */
     .nx-expansion-asset {
       display: grid;
-      grid-template-columns: auto 1fr auto auto;
-      column-gap: 12px;
+      grid-template-columns: 1fr 1fr auto auto;
+      column-gap: 16px;
       align-items: center;
+      width: 100%;
       font-size: 14px;
       line-height: 24px;
     }
@@ -908,19 +913,19 @@ window._nxRunStepStagger = (screen) => {
       exp.className = 'nx-expansion';
       if (kind === 'fees') {
         exp.innerHTML =
-          '<div class="nx-expansion-row">Execution Gas fee <span class="nx-val">$0.05</span></div>' +
-          '<div class="nx-expansion-row">Protocol fee <span class="nx-val">$0.00</span></div>' +
-          '<div class="nx-expansion-row">Solver fee <span class="nx-val">$0.001</span></div>' +
-          '<div class="nx-expansion-row">Gas sponsorship <span class="nx-val">$0.10</span></div>';
+          '<div class="nx-expansion-row"><span>Execution Gas fee</span><span class="nx-val">$0.05</span></div>' +
+          '<div class="nx-expansion-row"><span>Protocol fee</span><span class="nx-val">$0.00</span></div>' +
+          '<div class="nx-expansion-row"><span>Solver fee</span><span class="nx-val">$0.001</span></div>' +
+          '<div class="nx-expansion-row"><span>Gas sponsorship</span><span class="nx-val">$0.10</span></div>';
       } else if (kind === 'assets') {
         exp.innerHTML =
           '<div class="nx-expansion-asset"><span class="nx-ea-sym">USDC</span><span class="nx-ea-chain">Arbitrum</span><span class="nx-ea-amt">250 USDC</span><span class="nx-ea-usd">$250.50</span></div>' +
           '<div class="nx-expansion-asset"><span class="nx-ea-sym">ETH</span><span class="nx-ea-chain">Optimism</span><span class="nx-ea-amt">0.435 ETH</span><span class="nx-ea-usd">$150.50</span></div>';
       } else if (kind === 'priceImpact') {
         exp.innerHTML =
-          '<div class="nx-expansion-row">Swap impact <span class="nx-val" style="color:#1F8A4F">−0.04%</span></div>' +
-          '<div class="nx-expansion-row">Max. slippage <span class="nx-val">Auto</span></div>' +
-          '<div class="nx-expansion-row">Min. received <span class="nx-val">11.18 USDT</span></div>';
+          '<div class="nx-expansion-row"><span>Swap impact</span><span class="nx-val" style="color:#1F8A4F">−0.04%</span></div>' +
+          '<div class="nx-expansion-row"><span>Max. slippage</span><span class="nx-val">Auto</span></div>' +
+          '<div class="nx-expansion-row"><span>Min. received</span><span class="nx-val">11.18 USDT</span></div>';
       }
       row.insertAdjacentElement('afterend', exp);
 
