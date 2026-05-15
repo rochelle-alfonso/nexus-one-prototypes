@@ -1688,6 +1688,26 @@ window._nxRunStepStagger = (screen) => {
       const chainBadge = d.chainIconUrl
         ? `<div style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:999px;outline:1.5px solid #FFFFFE;background-image:url(${d.chainIconUrl});background-position:50%;background-repeat:no-repeat;background-size:100% 100%;box-sizing:border-box"></div>`
         : '';
+
+      // Multi-chain icon stack: shown when chainText is "N chains" (unified rows
+      // or multi-chain tokens). Renders up to 5 small overlapping chain icons
+      // BEFORE the "N chains" text — matches Paper's design.
+      const ARB = 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/6QJRRY0GSJXQP5YQHSX35QNXFM.png';
+      const BASE = 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/3MMP197C513VQXSB9AVFCAKSGQ.png';
+      const OP = 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/5QY8PJHAYP07Y6Z2M581HMX6DM.png';
+      const POLY = 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/63HJJXD1YGS4DCQN2DQRQSGMF2.png';
+      const ETH = 'https://app.paper.design/file-assets/01KRGJMCYD8BQA4GJ4W95K68XS/40BQN1YH7HNSSTG19JRZ6FKXPV.png';
+      const CHAIN_SET = [ARB, OP, BASE, POLY, ETH];
+      const chainsMatch = (d.chainText || '').match(/^(\d+) chains?$/);
+      let chainStack = '';
+      if (chainsMatch) {
+        const n = Math.min(parseInt(chainsMatch[1], 10), 5);
+        const icons = CHAIN_SET.slice(0, n);
+        const w = 14 + (n - 1) * 8 + 2;
+        chainStack = `<div style="position:relative;flex-shrink:0;width:${w}px;height:14px">` +
+          icons.map((url, i) => `<div style="position:absolute;top:0;left:${i*8}px;width:14px;height:14px;border-radius:999px;outline:1.5px solid #FFFFFE;background-image:url(${url});background-position:50%;background-repeat:no-repeat;background-size:100% 100%;box-sizing:border-box"></div>`).join('') +
+        '</div>';
+      }
       // Match Paper exactly: paddingBlock 16px, paddingInline 16px, gap 12px,
       // 36px icon, 16px/24px name & balance, 14px/20px chain & USD.
       return [
@@ -1702,7 +1722,7 @@ window._nxRunStepStagger = (screen) => {
               `<span style="color:#161615;font-family:\'Geist-Medium\',\'Geist\',system-ui;font-size:16px;font-weight:500;line-height:24px">${esc(d.tokenSymbol)}</span>`,
               unifiedBadge,
             '</div>',
-            `<div style="color:#848483;font-family:\'Geist-Regular\',\'Geist\',system-ui;font-size:14px;line-height:20px">${esc(d.chainText)}</div>`,
+            `<div style="display:flex;align-items:center;gap:6px">${chainStack}<span style="color:#848483;font-family:\'Geist-Regular\',\'Geist\',system-ui;font-size:14px;line-height:20px">${esc(d.chainText)}</span></div>`,
           '</div>',
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">',
             `<div style="color:#161615;font-family:\'Geist-Medium\',\'Geist\',system-ui;font-size:16px;font-weight:500;line-height:24px;font-variant-numeric:tabular-nums">${esc(d.balance)}</div>`,
